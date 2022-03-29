@@ -1,6 +1,8 @@
+use std::fmt::{Display, Formatter};
 use std::str::CharIndices;
+use thiserror::Error;
 
-struct Lexer<'a> {
+pub struct Lexer<'a> {
     chars: CharIndices<'a>,
     rest: Option<(usize, char)>,
 }
@@ -86,7 +88,7 @@ fn read_until(chars: &mut CharIndices, stop: char) -> Result<String, LexerError>
 }
 
 #[derive(Debug, Eq, PartialEq)]
-enum Token {
+pub enum Token {
     /// Unquoted string
     Literal(String, TokenMeta),
     /// Quoted string literal, ex. "hello world"
@@ -101,12 +103,46 @@ enum Token {
     RightParenthesis(TokenMeta),
 }
 
+impl Token {
+    pub fn meta(&self) -> &TokenMeta {
+        match self {
+            Token::Literal(_, m) => m,
+            Token::String(_, m) => m,
+            Token::Comma(m) => m,
+            Token::Colon(m) => m,
+            Token::LeftParenthesis(m) => m,
+            Token::RightParenthesis(m) => m,
+        }
+    }
+}
+
+impl Display for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Token::Literal(s, m) => write!(f, "LITERAL({}) at position {}", s, m.pos.to_string()),
+            Token::String(s, m) => write!(f, "STRING({}) at position {}", s, m.pos.to_string()),
+            Token::Comma(m) => write!(f, "COMMA at position {}", m.pos.to_string()),
+            Token::Colon(m) => write!(f, "COLON at position {}", m.pos.to_string()),
+            Token::LeftParenthesis(m) => write!(f, "LEFT_PARENTHESIS at position {}", m.pos.to_string()),
+            Token::RightParenthesis(m) => write!(f, "RIGHT_PARENTHESIS at position {}", m.pos.to_string()),
+        }
+    }
+}
+
 #[derive(Debug, Eq, PartialEq)]
-struct TokenMeta {
+pub struct TokenMeta {
     pos: usize,
 }
 
-enum LexerError {
+impl TokenMeta {
+    pub fn pos(&self) -> usize {
+        self.pos
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum LexerError {
+    #[error("string literal is not closed")]
     StringIsNotClosed,
 }
 
