@@ -1,19 +1,29 @@
+use crate::v1::expr::Expression;
+
+#[derive(Debug)]
 pub struct Query {
     sources: Vec<Source>,
+    expression: Expression,
 }
 
 impl Query {
-    pub(crate) fn new(sources: Vec<Source>) -> Query {
+    pub(crate) fn new(sources: Vec<Source>, expression: Expression) -> Query {
         Query {
             sources,
+            expression
         }
     }
 
     pub fn sources(&self) -> &[Source] {
         &self.sources
     }
+
+    pub fn expression(&self) -> &Expression {
+        &self.expression
+    }
 }
 
+#[derive(Debug)]
 pub struct Source {
     class: String,
     argument: Option<String>,
