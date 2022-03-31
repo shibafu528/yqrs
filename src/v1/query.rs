@@ -7,7 +7,7 @@ pub struct Query {
 }
 
 impl Query {
-    pub(crate) fn new(sources: Vec<Source>, expression: Expression) -> Query {
+    pub(crate) fn new(sources: Vec<Source>, expression: Expression) -> Self {
         Query {
             sources,
             expression
@@ -30,14 +30,14 @@ pub struct Source {
 }
 
 impl Source {
-    pub(crate) fn new(class: String) -> Source {
+    pub(crate) fn new(class: String) -> Self {
         Source{
             class,
             argument: None,
         }
     }
 
-    pub(crate) fn new_with_argument(class: String, argument: String) -> Source {
+    pub(crate) fn new_with_argument(class: String, argument: String) -> Self {
         Source {
             class,
             argument: Some(argument),

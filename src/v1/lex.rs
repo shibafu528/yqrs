@@ -8,7 +8,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(query: &'a str) -> Lexer {
+    pub fn new(query: &'a str) -> Self {
         let query = query.trim_end();
         Lexer {
             chars: query.char_indices(),

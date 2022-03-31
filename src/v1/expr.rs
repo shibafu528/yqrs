@@ -32,11 +32,11 @@ pub struct Cons {
 }
 
 impl Cons {
-    pub(crate) fn new(car: Box<Expression>, cdr: Box<Expression>) -> Cons {
+    pub(crate) fn new(car: Box<Expression>, cdr: Box<Expression>) -> Self {
         Cons { car, cdr }
     }
 
-    pub(crate) fn empty() -> Cons {
+    pub(crate) fn empty() -> Self {
         Cons {
             car: Box::new(Expression::Atom(Atom::Nil)),
             cdr: Box::new(Expression::Atom(Atom::Nil)),
