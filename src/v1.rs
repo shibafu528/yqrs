@@ -1,4 +1,4 @@
 mod expr;
 mod lex;
-mod parser;
+pub mod parser;
 mod query;
