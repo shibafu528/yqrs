@@ -104,6 +104,7 @@ pub enum Token {
 }
 
 impl Token {
+    #[allow(dead_code)]
     pub fn meta(&self) -> &TokenMeta {
         match self {
             Token::Literal(_, m) => m,
@@ -135,6 +136,7 @@ pub struct TokenMeta {
 }
 
 impl TokenMeta {
+    #[allow(dead_code)]
     pub fn pos(&self) -> usize {
         self.pos
     }
