@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
     Cons(Cons),
     Atom(Atom),
@@ -25,7 +25,7 @@ impl From<Atom> for Expression {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Cons {
     car: Box<Expression>,
     cdr: Box<Expression>,
@@ -56,7 +56,7 @@ impl Cons {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Atom {
     Nil,
     Symbol(String),
