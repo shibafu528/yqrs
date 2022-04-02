@@ -11,6 +11,10 @@ impl Expression {
             Expression::Atom(a) => a.is_nil(),
         }
     }
+
+    pub(crate) fn t() -> Self {
+        Expression::Atom(Atom::Symbol("t".to_string()))
+    }
 }
 
 impl From<Cons> for Expression {

@@ -28,7 +28,7 @@ impl Context {
     fn op_equals(&mut self, cdr: &Expression) -> Result<Expression, Error> {
         match cdr {
             Expression::Atom(Atom::Nil) => Ok(cdr.clone()),
-            Expression::Atom(_) => Ok(Expression::Atom(Atom::Symbol("t".to_string()))),
+            Expression::Atom(_) => Ok(Expression::t()),
             Expression::Cons(cons) => {
                 let car = self.evaluate(cons.car())?;
                 let mut cdr = cons.cdr();
@@ -47,7 +47,7 @@ impl Context {
                         return Ok(Expression::Atom(Atom::Nil));
                     }
                 }
-                Ok(Expression::Atom(Atom::Symbol("t".to_string())))
+                Ok(Expression::t())
             }
         }
     }
@@ -75,7 +75,7 @@ mod tests {
         ).into();
         let mut context = Context::new();
         match context.evaluate(&expr) {
-            Ok(ret) => assert_eq!(Expression::Atom(Atom::Symbol("t".to_string())), ret),
+            Ok(ret) => assert_eq!(Expression::t(), ret),
             Err(_) => assert!(false),
         }
     }
