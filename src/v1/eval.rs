@@ -21,13 +21,14 @@ impl Context {
     fn call(&mut self, symbol: &str, cdr: &Expression) -> Result<Expression, Error> {
         match symbol {
             "equals" | "eq" | "=" | "==" => self.op_equals(cdr),
+            "noteq" | "neq" | "!=" | "/=" => self.op_noteq(cdr),
             _ => Err(Error::VoidFunction),
         }
     }
 
     fn op_equals(&mut self, cdr: &Expression) -> Result<Expression, Error> {
         match cdr {
-            Expression::Atom(Atom::Nil) => Ok(cdr.clone()),
+            Expression::Atom(Atom::Nil) => Ok(Expression::Atom(Atom::Nil)),
             Expression::Atom(_) => Ok(Expression::t()),
             Expression::Cons(cons) => {
                 let car = self.evaluate(cons.car())?;
@@ -49,6 +50,14 @@ impl Context {
                 }
                 Ok(Expression::t())
             }
+        }
+    }
+
+    fn op_noteq(&mut self, cdr: &Expression) -> Result<Expression, Error> {
+        if self.op_equals(cdr)?.is_nil() {
+            Ok(Expression::t())
+        } else {
+            Ok(Expression::Atom(Atom::Nil))
         }
     }
 }
@@ -92,6 +101,38 @@ mod tests {
         let mut context = Context {};
         match context.evaluate(&expr) {
             Ok(ret) => assert_eq!(Expression::Atom(Atom::Nil), ret),
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn noteq_equal() {
+        let expr = Cons::new(
+            Box::new(Atom::Symbol("noteq".to_string()).into()),
+            Box::new(Cons::new(
+                Box::new(Atom::Integer(1).into()),
+                Box::new(Atom::Integer(1).into())).into()
+            ),
+        ).into();
+        let mut context = Context::new();
+        match context.evaluate(&expr) {
+            Ok(ret) => assert_eq!(Expression::Atom(Atom::Nil), ret),
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn noteq_not_equal() {
+        let expr = Cons::new(
+            Box::new(Atom::Symbol("noteq".to_string()).into()),
+            Box::new(Cons::new(
+                Box::new(Atom::Integer(1).into()),
+                Box::new(Atom::Integer(2).into())).into()
+            ),
+        ).into();
+        let mut context = Context {};
+        match context.evaluate(&expr) {
+            Ok(ret) => assert_eq!(Expression::t(), ret),
             Err(_) => assert!(false),
         }
     }
