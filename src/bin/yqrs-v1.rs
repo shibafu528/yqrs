@@ -1,4 +1,5 @@
 use std::{env, process};
+use yqrs::v1::eval::Context;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -8,5 +9,8 @@ fn main() {
     }
 
     let query = yqrs::v1::parser::parse(&args[1]).unwrap();
-    println!("{:#?}", query);
+    println!("==> Parse result:\n{:#?}\n", query);
+
+    let result = Context::new().evaluate(query.expression());
+    println!("==> Eval result:\n{:#?}", result);
 }

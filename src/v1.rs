@@ -1,4 +1,4 @@
-mod eval;
+pub mod eval;
 mod expr;
 mod lex;
 pub mod parser;
