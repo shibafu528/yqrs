@@ -67,6 +67,7 @@ pub enum Atom {
     String(String),
     Integer(i64),
     Float(f64),
+    Reference(u64),
 }
 
 impl Atom {
