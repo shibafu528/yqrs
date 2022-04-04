@@ -202,17 +202,15 @@ fn parse_literal(literal: String) -> Result<Atom, ParseError> {
     }
 
     if has_point {
-        Ok(Atom::Float(
-            literal
-                .parse::<f64>()
-                .map_err(|_| ParseError::UnparseableNumber(literal))?,
-        ))
+        literal
+            .parse::<f64>()
+            .map(|f| Atom::Float(f))
+            .map_err(|_| ParseError::UnparseableNumber(literal))
     } else {
-        Ok(Atom::Integer(
-            literal
-                .parse::<i64>()
-                .map_err(|_| ParseError::UnparseableNumber(literal))?,
-        ))
+        literal
+            .parse::<i64>()
+            .map(|i| Atom::Integer(i))
+            .map_err(|_| ParseError::UnparseableNumber(literal))
     }
 }
 
