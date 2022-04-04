@@ -12,7 +12,7 @@ impl Expression {
         }
     }
 
-    pub(crate) fn t() -> Self {
+    pub fn t() -> Self {
         Expression::Atom(Atom::Symbol("t".to_string()))
     }
 }
@@ -36,11 +36,11 @@ pub struct Cons {
 }
 
 impl Cons {
-    pub(crate) fn new(car: Box<Expression>, cdr: Box<Expression>) -> Self {
+    pub fn new(car: Box<Expression>, cdr: Box<Expression>) -> Self {
         Cons { car, cdr }
     }
 
-    pub(crate) fn empty() -> Self {
+    pub fn empty() -> Self {
         Cons {
             car: Box::new(Expression::Atom(Atom::Nil)),
             cdr: Box::new(Expression::Atom(Atom::Nil)),

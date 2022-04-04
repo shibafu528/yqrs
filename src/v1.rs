@@ -1,5 +1,5 @@
 pub mod eval;
-mod expr;
+pub mod expr;
 mod lex;
 pub mod parser;
 mod query;
