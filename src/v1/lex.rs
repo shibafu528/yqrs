@@ -28,7 +28,7 @@ impl<'a> Iterator for Lexer<'a> {
                 Some(v) => {
                     self.rest = None;
                     Some(v)
-                },
+                }
                 None => self.chars.next(),
             };
             match token {
@@ -38,17 +38,22 @@ impl<'a> Iterator for Lexer<'a> {
                         match char {
                             ' ' | '\t' | '\r' | '\n' | '"' | '\'' | ',' | ':' | '(' | ')' => {
                                 self.rest = Some((pos, char));
-                                return Some(Ok(Token::Literal(buf.into_iter().collect(), TokenMeta { pos: p })));
+                                return Some(Ok(Token::Literal(
+                                    buf.into_iter().collect(),
+                                    TokenMeta { pos: p },
+                                )));
                             }
                             _ => buf.push(char),
                         }
                     } else {
                         match char {
                             ' ' | '\t' | '\r' | '\n' => {}
-                            c @ '"' | c @ '\'' => return match read_until(&mut self.chars, c) {
-                                Ok(s) => Some(Ok(Token::String(s, TokenMeta { pos }))),
-                                Err(e) => Some(Err(e))
-                            },
+                            c @ '"' | c @ '\'' => {
+                                return match read_until(&mut self.chars, c) {
+                                    Ok(s) => Some(Ok(Token::String(s, TokenMeta { pos }))),
+                                    Err(e) => Some(Err(e)),
+                                }
+                            }
                             ',' => return Some(Ok(Token::Comma(TokenMeta { pos }))),
                             ':' => return Some(Ok(Token::Colon(TokenMeta { pos }))),
                             '(' => return Some(Ok(Token::LeftParenthesis(TokenMeta { pos }))),
@@ -60,9 +65,14 @@ impl<'a> Iterator for Lexer<'a> {
                         }
                     }
                 }
-                None => return match begin {
-                    Some(pos) => Some(Ok(Token::Literal(buf.into_iter().collect(), TokenMeta { pos }))),
-                    None => None,
+                None => {
+                    return match begin {
+                        Some(pos) => Some(Ok(Token::Literal(
+                            buf.into_iter().collect(),
+                            TokenMeta { pos },
+                        ))),
+                        None => None,
+                    }
                 }
             }
         }
@@ -124,8 +134,12 @@ impl Display for Token {
             Token::String(s, m) => write!(f, "STRING({}) at position {}", s, m.pos.to_string()),
             Token::Comma(m) => write!(f, "COMMA at position {}", m.pos.to_string()),
             Token::Colon(m) => write!(f, "COLON at position {}", m.pos.to_string()),
-            Token::LeftParenthesis(m) => write!(f, "LEFT_PARENTHESIS at position {}", m.pos.to_string()),
-            Token::RightParenthesis(m) => write!(f, "RIGHT_PARENTHESIS at position {}", m.pos.to_string()),
+            Token::LeftParenthesis(m) => {
+                write!(f, "LEFT_PARENTHESIS at position {}", m.pos.to_string())
+            }
+            Token::RightParenthesis(m) => {
+                write!(f, "RIGHT_PARENTHESIS at position {}", m.pos.to_string())
+            }
         }
     }
 }

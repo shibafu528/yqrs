@@ -1,8 +1,8 @@
-use std::iter::Peekable;
+use crate::v1::expr::{Atom, Cons, Expression};
 use crate::v1::lex::{Lexer, LexerError, Token};
 use crate::v1::query::{Query, Source};
+use std::iter::Peekable;
 use thiserror::Error;
-use crate::v1::expr::{Atom, Cons, Expression};
 
 const DEFAULT_QUERY: &str = "from all";
 
@@ -17,12 +17,10 @@ pub fn parse(query: &str) -> Result<Query, ParseError> {
 
     let mut sources = vec![];
     match lex.next() {
-        Some(Ok(Token::Literal(s, _))) if s == "from" => {
-            match parse_from_clause(&mut lex) {
-                Ok(srcs) => sources = srcs,
-                Err(e) => return Err(e)
-            }
-        }
+        Some(Ok(Token::Literal(s, _))) if s == "from" => match parse_from_clause(&mut lex) {
+            Ok(srcs) => sources = srcs,
+            Err(e) => return Err(e),
+        },
         Some(Ok(Token::Literal(s, _))) if s == "where" => {}
         Some(Ok(t)) => return Err(ParseError::UnexpectedToken(t)),
         Some(Err(e)) => return Err(e.into()),
@@ -70,9 +68,7 @@ fn parse_from_clause(lex: &mut Peekable<Lexer>) -> Result<Vec<Source>, ParseErro
                     }
 
                     // <class>
-                    _ => {
-                        src.push(Source::new(class))
-                    }
+                    _ => src.push(Source::new(class)),
                 }
             }
 
@@ -83,7 +79,7 @@ fn parse_from_clause(lex: &mut Peekable<Lexer>) -> Result<Vec<Source>, ParseErro
                 }
                 match lex.peek() {
                     Some(Ok(Token::Literal(_, _))) => {} // ok
-                    _ => return Err(ParseError::UnexpectedToken(t))
+                    _ => return Err(ParseError::UnexpectedToken(t)),
                 }
             }
 
@@ -130,7 +126,7 @@ fn parse_list(lex: &mut Peekable<Lexer>) -> Result<Cons, ParseError> {
         None => return Err(ParseError::UnterminatedList),
 
         // continue
-        _ => {},
+        _ => {}
     }
 
     // (car ?...
@@ -187,7 +183,7 @@ fn parse_list(lex: &mut Peekable<Lexer>) -> Result<Cons, ParseError> {
 
 fn parse_literal(literal: String) -> Result<Atom, ParseError> {
     if literal == "nil" {
-        return Ok(Atom::Nil)
+        return Ok(Atom::Nil);
     }
 
     let mut has_point = false;
@@ -196,19 +192,27 @@ fn parse_literal(literal: String) -> Result<Atom, ParseError> {
             '.' => {
                 if has_point {
                     // double point is invalid
-                    return Ok(Atom::Symbol(literal))
+                    return Ok(Atom::Symbol(literal));
                 }
                 has_point = true
-            },
+            }
             '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '-' | '+' => (),
-            _ => return Ok(Atom::Symbol(literal))
+            _ => return Ok(Atom::Symbol(literal)),
         }
     }
 
     if has_point {
-        Ok(Atom::Float(literal.parse::<f64>().map_err(|_| ParseError::UnparseableNumber(literal))?))
+        Ok(Atom::Float(
+            literal
+                .parse::<f64>()
+                .map_err(|_| ParseError::UnparseableNumber(literal))?,
+        ))
     } else {
-        Ok(Atom::Integer(literal.parse::<i64>().map_err(|_| ParseError::UnparseableNumber(literal))?))
+        Ok(Atom::Integer(
+            literal
+                .parse::<i64>()
+                .map_err(|_| ParseError::UnparseableNumber(literal))?,
+        ))
     }
 }
 
@@ -242,7 +246,7 @@ mod tests {
 
         let bool = match query.expression() {
             Expression::Atom(s @ Atom::Symbol(_)) if !s.is_nil() => true,
-            _ => false
+            _ => false,
         };
         assert!(bool)
     }
@@ -338,7 +342,7 @@ mod tests {
                     Expression::Atom(Atom::Nil) => assert!(true),
                     _ => assert!(false),
                 }
-            },
+            }
             _ => assert!(false),
         }
     }

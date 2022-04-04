@@ -28,7 +28,10 @@ impl Context {
     }
 
     fn get_variable(&self, symbol: &str) -> Result<Expression, Error> {
-        self.variable_provider.as_ref().and_then(|p| p.get(symbol)).ok_or_else(|| Error::VoidVariable(symbol.to_string()))
+        self.variable_provider
+            .as_ref()
+            .and_then(|p| p.get(symbol))
+            .ok_or_else(|| Error::VoidVariable(symbol.to_string()))
     }
 
     fn call(&mut self, symbol: &str, cdr: &Expression) -> Result<Expression, Error> {
@@ -88,18 +91,22 @@ pub trait VariableProvider {
 
 #[cfg(test)]
 mod tests {
-    use crate::v1::expr::Cons;
     use super::*;
+    use crate::v1::expr::Cons;
 
     #[test]
     fn equals_equal() {
         let expr = Cons::new(
             Box::new(Atom::Symbol("equals".to_string()).into()),
-            Box::new(Cons::new(
-                Box::new(Atom::Integer(1).into()),
-                Box::new(Atom::Integer(1).into())).into()
+            Box::new(
+                Cons::new(
+                    Box::new(Atom::Integer(1).into()),
+                    Box::new(Atom::Integer(1).into()),
+                )
+                .into(),
             ),
-        ).into();
+        )
+        .into();
         let mut context = Context::new();
         match context.evaluate(&expr) {
             Ok(ret) => assert_eq!(Expression::t(), ret),
@@ -111,11 +118,15 @@ mod tests {
     fn equals_not_equal() {
         let expr = Cons::new(
             Box::new(Atom::Symbol("equals".to_string()).into()),
-            Box::new(Cons::new(
-                Box::new(Atom::Integer(1).into()),
-                Box::new(Atom::Integer(2).into())).into()
+            Box::new(
+                Cons::new(
+                    Box::new(Atom::Integer(1).into()),
+                    Box::new(Atom::Integer(2).into()),
+                )
+                .into(),
             ),
-        ).into();
+        )
+        .into();
         let mut context = Context::new();
         match context.evaluate(&expr) {
             Ok(ret) => assert_eq!(Expression::Atom(Atom::Nil), ret),
@@ -127,11 +138,15 @@ mod tests {
     fn noteq_equal() {
         let expr = Cons::new(
             Box::new(Atom::Symbol("noteq".to_string()).into()),
-            Box::new(Cons::new(
-                Box::new(Atom::Integer(1).into()),
-                Box::new(Atom::Integer(1).into())).into()
+            Box::new(
+                Cons::new(
+                    Box::new(Atom::Integer(1).into()),
+                    Box::new(Atom::Integer(1).into()),
+                )
+                .into(),
             ),
-        ).into();
+        )
+        .into();
         let mut context = Context::new();
         match context.evaluate(&expr) {
             Ok(ret) => assert_eq!(Expression::Atom(Atom::Nil), ret),
@@ -143,11 +158,15 @@ mod tests {
     fn noteq_not_equal() {
         let expr = Cons::new(
             Box::new(Atom::Symbol("noteq".to_string()).into()),
-            Box::new(Cons::new(
-                Box::new(Atom::Integer(1).into()),
-                Box::new(Atom::Integer(2).into())).into()
+            Box::new(
+                Cons::new(
+                    Box::new(Atom::Integer(1).into()),
+                    Box::new(Atom::Integer(2).into()),
+                )
+                .into(),
             ),
-        ).into();
+        )
+        .into();
         let mut context = Context::new();
         match context.evaluate(&expr) {
             Ok(ret) => assert_eq!(Expression::t(), ret),

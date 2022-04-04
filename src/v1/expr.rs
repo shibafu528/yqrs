@@ -73,7 +73,7 @@ impl Atom {
     pub fn is_nil(&self) -> bool {
         match self {
             Atom::Nil => true,
-            _ => false
+            _ => false,
         }
     }
 }

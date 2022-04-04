@@ -1,5 +1,5 @@
-use std::{env, process};
 use std::collections::HashMap;
+use std::{env, process};
 use yqrs::v1::eval::{Context, VariableProvider};
 use yqrs::v1::expr::{Atom, Expression};
 
@@ -14,10 +14,11 @@ fn main() {
     println!("==> Parse result:\n{:#?}\n", query);
 
     let mut context = Context::new();
-    let provider = Box::new(Provider{
-        values: HashMap::from([
-            ("?source", Expression::Atom(Atom::String("Yukari for Android".to_string())))
-        ]),
+    let provider = Box::new(Provider {
+        values: HashMap::from([(
+            "?source",
+            Expression::Atom(Atom::String("Yukari for Android".to_string())),
+        )]),
     });
     context.set_variable_provider(provider);
 
