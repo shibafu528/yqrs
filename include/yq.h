@@ -24,7 +24,7 @@ typedef struct YQ_Query YQ_Query;
 extern "C" {
 #endif // __cplusplus
 
-enum YQ_ParseStatus yq_v1_parser_parse(const char *query, struct YQ_Query **out);
+enum YQ_ParseStatus yq_v1_parse(const char *query, struct YQ_Query **out);
 
 void yq_v1_query_free(struct YQ_Query *query);
 

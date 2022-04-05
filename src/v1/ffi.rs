@@ -38,10 +38,7 @@ impl From<ParseError> for ParseStatus {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn yq_v1_parser_parse(
-    query: *const c_char,
-    out: *mut *mut Query,
-) -> ParseStatus {
+pub unsafe extern "C" fn yq_v1_parse(query: *const c_char, out: *mut *mut Query) -> ParseStatus {
     let query = match CStr::from_ptr(query).to_str() {
         Ok(s) => s,
         Err(_) => return ParseStatus::InvalidQuery,
