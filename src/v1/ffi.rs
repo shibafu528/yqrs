@@ -17,10 +17,30 @@ pub enum ParseStatus {
     LexerStringIsNotClosed = 2000,
 }
 
+impl From<LexerError> for ParseStatus {
+    fn from(e: LexerError) -> Self {
+        match e {
+            LexerError::StringIsNotClosed => ParseStatus::LexerStringIsNotClosed,
+        }
+    }
+}
+
+impl From<ParseError> for ParseStatus {
+    fn from(e: ParseError) -> Self {
+        match e {
+            ParseError::LexerError(e) => e.into(),
+            ParseError::UnexpectedToken(_) => ParseStatus::UnexpectedToken,
+            ParseError::UnexpectedEOF => ParseStatus::UnexpectedEOF,
+            ParseError::UnparseableNumber(_) => ParseStatus::UnparseableNumber,
+            ParseError::UnterminatedList => ParseStatus::UnterminatedList,
+        }
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn yq_v1_parser_parse(
     query: *const c_char,
-    result: *mut *mut Query,
+    out: *mut *mut Query,
 ) -> ParseStatus {
     let query = match CStr::from_ptr(query).to_str() {
         Ok(s) => s,
@@ -28,18 +48,10 @@ pub unsafe extern "C" fn yq_v1_parser_parse(
     };
     match crate::v1::parser::parse(query) {
         Ok(q) => {
-            *result = Box::into_raw(Box::new(q));
+            *out = Box::into_raw(Box::new(q));
             ParseStatus::Success
         }
-        Err(e) => match e {
-            ParseError::LexerError(e) => match e {
-                LexerError::StringIsNotClosed => ParseStatus::LexerStringIsNotClosed,
-            },
-            ParseError::UnexpectedToken(_) => ParseStatus::UnexpectedToken,
-            ParseError::UnexpectedEOF => ParseStatus::UnexpectedEOF,
-            ParseError::UnparseableNumber(_) => ParseStatus::UnparseableNumber,
-            ParseError::UnterminatedList => ParseStatus::UnterminatedList,
-        },
+        Err(e) => e.into(),
     }
 }
 
