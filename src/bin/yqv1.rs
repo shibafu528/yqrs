@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::{env, process};
-use yqrs::v1::eval::{Context, VariableProvider};
-use yqrs::v1::expr::{Atom, Expression};
+use yq::v1::eval::{Context, VariableProvider};
+use yq::v1::expr::{Atom, Expression};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -10,7 +10,7 @@ fn main() {
         process::exit(1);
     }
 
-    let query = yqrs::v1::parser::parse(&args[1]).unwrap();
+    let query = yq::v1::parser::parse(&args[1]).unwrap();
     println!("==> Parse result:\n{:#?}\n", query);
 
     let mut context = Context::new();
