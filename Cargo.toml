@@ -8,6 +8,10 @@ edition = "2021"
 [lib]
 crate-type = ["lib", "cdylib"]
 
+[profile.release]
+lto = true
+strip = "debuginfo"
+
 [dependencies]
 thiserror = "1.0"
 libc = "0.2"
