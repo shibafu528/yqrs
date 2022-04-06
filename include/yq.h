@@ -20,6 +20,8 @@ typedef enum YQ_ParseStatus {
 
 typedef struct YQ_Query YQ_Query;
 
+typedef struct YQ_Source YQ_Source;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -27,6 +29,14 @@ extern "C" {
 enum YQ_ParseStatus yq_v1_parse(const char *query, struct YQ_Query **out);
 
 void yq_v1_query_free(struct YQ_Query *query);
+
+const struct YQ_Source *yq_v1_query_get_source(const struct YQ_Query *query, size_t index);
+
+size_t yq_v1_query_get_sources_size(const struct YQ_Query *query);
+
+size_t yq_v1_source_get_argument(const struct YQ_Source *source, const char **out);
+
+size_t yq_v1_source_get_class(const struct YQ_Source *source, const char **out);
 
 #ifdef __cplusplus
 } // extern "C"
