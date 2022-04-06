@@ -22,6 +22,11 @@ typedef struct YQ_Query YQ_Query;
 
 typedef struct YQ_Source YQ_Source;
 
+typedef struct YQ_StringRef {
+  const char *ptr;
+  size_t len;
+} YQ_StringRef;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -34,9 +39,9 @@ const struct YQ_Source *yq_v1_query_get_source(const struct YQ_Query *query, siz
 
 size_t yq_v1_query_get_sources_size(const struct YQ_Query *query);
 
-size_t yq_v1_source_get_argument(const struct YQ_Source *source, const char **out);
+struct YQ_StringRef yq_v1_source_get_argument(const struct YQ_Source *source);
 
-size_t yq_v1_source_get_class(const struct YQ_Source *source, const char **out);
+struct YQ_StringRef yq_v1_source_get_class(const struct YQ_Source *source);
 
 #ifdef __cplusplus
 } // extern "C"

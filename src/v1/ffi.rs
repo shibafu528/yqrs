@@ -6,6 +6,34 @@ use std::ffi::CStr;
 use std::ptr::null;
 
 #[repr(C)]
+pub struct StringRef {
+    ptr: *const c_char,
+    len: usize,
+}
+
+impl StringRef {
+    fn null() -> Self {
+        StringRef {
+            ptr: null(),
+            len: 0,
+        }
+    }
+}
+
+trait ToStringRef {
+    fn to_string_ref(&self) -> StringRef;
+}
+
+impl ToStringRef for &str {
+    fn to_string_ref(&self) -> StringRef {
+        StringRef {
+            ptr: self.as_bytes().as_ptr() as *const c_char,
+            len: self.len(),
+        }
+    }
+}
+
+#[repr(C)]
 pub enum ParseStatus {
     Success = 0,
     InvalidQuery,
@@ -83,31 +111,20 @@ pub unsafe extern "C" fn yq_v1_query_free(query: *mut Query) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn yq_v1_source_get_class(
-    source: *const Source,
-    out: *mut *const c_char,
-) -> usize {
+pub unsafe extern "C" fn yq_v1_source_get_class(source: *const Source) -> StringRef {
     if source.is_null() {
-        return 0;
+        return StringRef::null();
     }
-    let class = (*source).class();
-    *out = class.as_bytes().as_ptr() as *const c_char;
-    class.len()
+    (*source).class().to_string_ref()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn yq_v1_source_get_argument(
-    source: *const Source,
-    out: *mut *const c_char,
-) -> usize {
+pub unsafe extern "C" fn yq_v1_source_get_argument(source: *const Source) -> StringRef {
     if source.is_null() {
-        return 0;
+        return StringRef::null();
     }
     match (*source).argument() {
-        Some(a) => {
-            *out = a.as_bytes().as_ptr() as *const c_char;
-            a.len()
-        }
-        None => 0,
+        Some(a) => a.to_string_ref(),
+        None => StringRef::null(),
     }
 }
