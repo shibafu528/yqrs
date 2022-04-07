@@ -5,8 +5,16 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+cli = ["clap"]
+
 [lib]
 crate-type = ["lib", "cdylib"]
+
+[[bin]]
+name = "yqv1"
+path = "src/bin/yqv1.rs"
+required-features = ["cli"]
 
 [profile.release]
 lto = true
@@ -15,3 +23,4 @@ strip = "debuginfo"
 [dependencies]
 thiserror = "1.0"
 libc = "0.2"
+clap = { version = "3.1.8", features = ["derive"], optional = true }
