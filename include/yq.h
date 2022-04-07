@@ -15,6 +15,16 @@ typedef enum YQ_EvalError {
   YQ_EvalError_VoidVariable,
 } YQ_EvalError;
 
+typedef enum YQ_ExprType {
+  YQ_ExprType_Nil,
+  YQ_ExprType_Symbol,
+  YQ_ExprType_String,
+  YQ_ExprType_Integer,
+  YQ_ExprType_Float,
+  YQ_ExprType_Reference,
+  YQ_ExprType_Cons,
+} YQ_ExprType;
+
 typedef enum YQ_ParseStatus {
   YQ_ParseStatus_Success = 0,
   YQ_ParseStatus_InvalidQuery,
@@ -32,6 +42,8 @@ typedef struct YQ_Expression YQ_Expression;
 typedef struct YQ_Query YQ_Query;
 
 typedef struct YQ_Source YQ_Source;
+
+typedef struct YQ_Expression *(*YQ_VariableProviderCallback)(const char *symbol);
 
 typedef struct YQ_StringRef {
   const char *ptr;
@@ -51,9 +63,36 @@ enum YQ_EvalError yq_v1_context_get_last_error(struct YQ_Context *context);
 
 struct YQ_Context *yq_v1_context_new(void);
 
+void yq_v1_context_set_variable_provider(struct YQ_Context *context,
+                                         YQ_VariableProviderCallback callback);
+
 void yq_v1_expression_free(struct YQ_Expression *expr);
 
+double yq_v1_expression_get_float(const struct YQ_Expression *expr);
+
+int64_t yq_v1_expression_get_integer(const struct YQ_Expression *expr);
+
+uint64_t yq_v1_expression_get_reference(const struct YQ_Expression *expr);
+
+struct YQ_StringRef yq_v1_expression_get_string(const struct YQ_Expression *expr);
+
+enum YQ_ExprType yq_v1_expression_get_type(const struct YQ_Expression *expr);
+
 bool yq_v1_expression_is_nil(const struct YQ_Expression *expr);
+
+struct YQ_Expression *yq_v1_expression_new_float(double value);
+
+struct YQ_Expression *yq_v1_expression_new_integer(int64_t value);
+
+struct YQ_Expression *yq_v1_expression_new_nil(void);
+
+struct YQ_Expression *yq_v1_expression_new_reference(uint64_t ref);
+
+struct YQ_Expression *yq_v1_expression_new_string(const char *string);
+
+struct YQ_Expression *yq_v1_expression_new_symbol(const char *symbol);
+
+struct YQ_Expression *yq_v1_expression_new_t(void);
 
 enum YQ_ParseStatus yq_v1_parse(const char *query, struct YQ_Query **out);
 

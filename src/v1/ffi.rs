@@ -1,11 +1,11 @@
 use crate::v1::eval;
-use crate::v1::eval::Error;
-use crate::v1::expr::Expression;
+use crate::v1::eval::{Error, VariableProvider};
+use crate::v1::expr::{Atom, Expression};
 use crate::v1::lex::LexerError;
 use crate::v1::parser::ParseError;
 use crate::v1::query::{Query, Source};
 use libc::c_char;
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 use std::ptr::{null, null_mut};
 
 #[repr(C)]
@@ -69,9 +69,41 @@ impl From<ParseError> for ParseStatus {
     }
 }
 
+type VariableProviderCallback = extern "C" fn(symbol: *const c_char) -> *mut Expression;
+
 pub struct Context {
     context: eval::Context,
     last_error: Option<eval::Error>,
+    variable_provider_callback: Option<VariableProviderCallback>,
+}
+
+impl VariableProvider for Context {
+    fn get(&self, symbol: &str) -> Option<Expression> {
+        match self.variable_provider_callback {
+            Some(callback) => {
+                let symbol = CString::new(symbol).unwrap();
+                let expr = callback(symbol.as_ptr());
+                if expr.is_null() {
+                    None
+                } else {
+                    let expr = unsafe { Box::from_raw(expr) };
+                    Some((*expr).clone())
+                }
+            }
+            None => None,
+        }
+    }
+}
+
+#[repr(C)]
+pub enum ExprType {
+    Nil,
+    Symbol,
+    String,
+    Integer,
+    Float,
+    Reference,
+    Cons,
 }
 
 #[repr(C)]
@@ -155,10 +187,13 @@ pub unsafe extern "C" fn yq_v1_source_get_argument(source: *const Source) -> Str
 
 #[no_mangle]
 pub unsafe extern "C" fn yq_v1_context_new() -> *mut Context {
-    Box::into_raw(Box::new(Context {
+    let ctx = Box::new(Context {
         context: eval::Context::new(),
         last_error: None,
-    }))
+        variable_provider_callback: None,
+    });
+    // ctx.context.set_variable_provider(ctx);
+    Box::into_raw(ctx)
 }
 
 #[no_mangle]
@@ -189,6 +224,17 @@ pub unsafe extern "C" fn yq_v1_context_eval(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn yq_v1_context_set_variable_provider(
+    context: *mut Context,
+    callback: VariableProviderCallback,
+) {
+    if context.is_null() {
+        return;
+    }
+    (*context).variable_provider_callback = Some(callback);
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn yq_v1_context_get_last_error(context: *mut Context) -> EvalError {
     if context.is_null() {
         return EvalError::Success;
@@ -204,11 +250,119 @@ pub unsafe extern "C" fn yq_v1_context_get_last_error(context: *mut Context) -> 
 }
 
 #[no_mangle]
+pub extern "C" fn yq_v1_expression_new_nil() -> *mut Expression {
+    Box::into_raw(Box::new(Expression::Atom(Atom::Nil)))
+}
+
+#[no_mangle]
+pub extern "C" fn yq_v1_expression_new_t() -> *mut Expression {
+    Box::into_raw(Box::new(Expression::t()))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_expression_new_symbol(symbol: *const c_char) -> *mut Expression {
+    match CStr::from_ptr(symbol).to_str() {
+        Ok(symbol) => {
+            let expr = Box::new(Expression::Atom(Atom::Symbol(String::from(symbol))));
+            Box::into_raw(expr)
+        }
+        Err(_) => null_mut(),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_expression_new_string(string: *const c_char) -> *mut Expression {
+    match CStr::from_ptr(string).to_str() {
+        Ok(string) => {
+            let expr = Box::new(Expression::Atom(Atom::String(String::from(string))));
+            Box::into_raw(expr)
+        }
+        Err(_) => null_mut(),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_expression_new_integer(value: i64) -> *mut Expression {
+    Box::into_raw(Box::new(Expression::Atom(Atom::Integer(value))))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_expression_new_float(value: f64) -> *mut Expression {
+    Box::into_raw(Box::new(Expression::Atom(Atom::Float(value))))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_expression_new_reference(r#ref: u64) -> *mut Expression {
+    Box::into_raw(Box::new(Expression::Atom(Atom::Reference(r#ref))))
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn yq_v1_expression_is_nil(expr: *const Expression) -> bool {
     if expr.is_null() {
         true
     } else {
         (*expr).is_nil()
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_expression_get_type(expr: *const Expression) -> ExprType {
+    if expr.is_null() {
+        return ExprType::Nil;
+    }
+    match *expr {
+        Expression::Cons(_) => ExprType::Cons,
+        Expression::Atom(Atom::Nil) => ExprType::Nil,
+        Expression::Atom(Atom::Symbol(_)) => ExprType::Symbol,
+        Expression::Atom(Atom::String(_)) => ExprType::String,
+        Expression::Atom(Atom::Integer(_)) => ExprType::Integer,
+        Expression::Atom(Atom::Float(_)) => ExprType::Float,
+        Expression::Atom(Atom::Reference(_)) => ExprType::Reference,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_expression_get_string(expr: *const Expression) -> StringRef {
+    if expr.is_null() {
+        return StringRef::null();
+    }
+    match &*expr {
+        Expression::Atom(Atom::Symbol(s)) => s.as_str().to_string_ref(),
+        Expression::Atom(Atom::String(s)) => s.as_str().to_string_ref(),
+        _ => StringRef::null(),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_expression_get_integer(expr: *const Expression) -> i64 {
+    if expr.is_null() {
+        return 0;
+    }
+    match *expr {
+        Expression::Atom(Atom::Integer(i)) => i,
+        _ => 0,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_expression_get_float(expr: *const Expression) -> f64 {
+    if expr.is_null() {
+        return 0.0;
+    }
+    match *expr {
+        Expression::Atom(Atom::Float(f)) => f,
+        _ => 0.0,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_expression_get_reference(expr: *const Expression) -> u64 {
+    if expr.is_null() {
+        return 0;
+    }
+    match *expr {
+        Expression::Atom(Atom::Reference(r)) => r,
+        _ => 0,
     }
 }
 
