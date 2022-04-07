@@ -74,25 +74,6 @@ type VariableProviderCallback = extern "C" fn(symbol: *const c_char) -> *mut Exp
 pub struct Context {
     context: eval::Context,
     last_error: Option<eval::Error>,
-    variable_provider_callback: Option<VariableProviderCallback>,
-}
-
-impl VariableProvider for Context {
-    fn get(&self, symbol: &str) -> Option<Expression> {
-        match self.variable_provider_callback {
-            Some(callback) => {
-                let symbol = CString::new(symbol).unwrap();
-                let expr = callback(symbol.as_ptr());
-                if expr.is_null() {
-                    None
-                } else {
-                    let expr = unsafe { Box::from_raw(expr) };
-                    Some((*expr).clone())
-                }
-            }
-            None => None,
-        }
-    }
 }
 
 #[repr(C)]
@@ -187,13 +168,10 @@ pub unsafe extern "C" fn yq_v1_source_get_argument(source: *const Source) -> Str
 
 #[no_mangle]
 pub unsafe extern "C" fn yq_v1_context_new() -> *mut Context {
-    let ctx = Box::new(Context {
+    Box::into_raw(Box::new(Context {
         context: eval::Context::new(),
         last_error: None,
-        variable_provider_callback: None,
-    });
-    // ctx.context.set_variable_provider(ctx);
-    Box::into_raw(ctx)
+    }))
 }
 
 #[no_mangle]
@@ -228,10 +206,26 @@ pub unsafe extern "C" fn yq_v1_context_set_variable_provider(
     context: *mut Context,
     callback: VariableProviderCallback,
 ) {
+    struct CVariableProvider(VariableProviderCallback);
+    impl VariableProvider for CVariableProvider {
+        fn get(&self, symbol: &str) -> Option<Expression> {
+            let symbol = CString::new(symbol).unwrap();
+            let expr = self.0(symbol.as_ptr());
+            if expr.is_null() {
+                None
+            } else {
+                let expr = unsafe { Box::from_raw(expr) };
+                Some((*expr).clone())
+            }
+        }
+    }
+
     if context.is_null() {
         return;
     }
-    (*context).variable_provider_callback = Some(callback);
+    (*context)
+        .context
+        .set_variable_provider(Box::new(CVariableProvider(callback)));
 }
 
 #[no_mangle]
