@@ -1,5 +1,5 @@
 use crate::v1::eval;
-use crate::v1::eval::{Error, VariableProvider};
+use crate::v1::eval::{Error, MethodDispatcher, VariableProvider};
 use crate::v1::expr::{Atom, Expression};
 use crate::v1::lex::LexerError;
 use crate::v1::parser::ParseError;
@@ -70,6 +70,13 @@ impl From<ParseError> for ParseStatus {
 }
 
 type VariableProviderCallback = extern "C" fn(symbol: *const c_char) -> *mut Expression;
+
+type MethodDispatcherCallback = extern "C" fn(
+    symbol: *const c_char,
+    receiver: *const Expression,
+    cddr: *const Expression,
+    result: *mut *mut Expression,
+) -> EvalError;
 
 pub struct Context {
     context: eval::Context,
@@ -226,6 +233,47 @@ pub unsafe extern "C" fn yq_v1_context_set_variable_provider(
     (*context)
         .context
         .set_variable_provider(Box::new(CVariableProvider(callback)));
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_context_set_method_dispatcher(
+    context: *mut Context,
+    callback: MethodDispatcherCallback,
+) {
+    struct CMethodDispatcher(MethodDispatcherCallback);
+    impl MethodDispatcher for CMethodDispatcher {
+        fn dispatch(
+            &self,
+            symbol: &str,
+            receiver: Atom,
+            cddr: &Expression,
+        ) -> Result<Expression, Error> {
+            let symbol = CString::new(symbol).unwrap();
+            let receiver = Expression::Atom(receiver);
+            let mut result = null_mut();
+            let error = self.0(symbol.as_ptr(), &receiver, cddr, &mut result);
+
+            let expr = if result.is_null() {
+                Expression::Atom(Atom::Nil)
+            } else {
+                *unsafe { Box::from_raw(result) }
+            };
+
+            match error {
+                EvalError::Success => Ok(expr),
+                EvalError::VoidFunction => Err(eval::Error::VoidFunction),
+                EvalError::InvalidFunction => Err(eval::Error::InvalidFunction),
+                EvalError::VoidVariable => Err(eval::Error::VoidVariable("*unknown*".to_string())),
+            }
+        }
+    }
+
+    if context.is_null() {
+        return;
+    }
+    (*context)
+        .context
+        .set_method_dispatcher(Box::new(CMethodDispatcher(callback)));
 }
 
 #[no_mangle]
