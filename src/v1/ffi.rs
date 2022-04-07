@@ -204,6 +204,15 @@ pub unsafe extern "C" fn yq_v1_context_get_last_error(context: *mut Context) -> 
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn yq_v1_expression_is_nil(expr: *const Expression) -> bool {
+    if expr.is_null() {
+        true
+    } else {
+        (*expr).is_nil()
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn yq_v1_expression_free(expr: *mut Expression) {
     if expr.is_null() {
         return;

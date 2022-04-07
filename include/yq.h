@@ -53,6 +53,8 @@ struct YQ_Context *yq_v1_context_new(void);
 
 void yq_v1_expression_free(struct YQ_Expression *expr);
 
+bool yq_v1_expression_is_nil(const struct YQ_Expression *expr);
+
 enum YQ_ParseStatus yq_v1_parse(const char *query, struct YQ_Query **out);
 
 void yq_v1_query_free(struct YQ_Query *query);
