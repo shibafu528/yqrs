@@ -12,6 +12,13 @@ impl Expression {
         }
     }
 
+    pub fn iter(&self) -> Iter {
+        Iter {
+            next: self,
+            finish: false,
+        }
+    }
+
     pub fn t() -> Self {
         Expression::Atom(Atom::Symbol("t".to_string()))
     }
@@ -26,6 +33,35 @@ impl From<Cons> for Expression {
 impl From<Atom> for Expression {
     fn from(a: Atom) -> Self {
         Self::Atom(a)
+    }
+}
+
+pub struct Iter<'a> {
+    next: &'a Expression,
+    finish: bool,
+}
+
+impl<'a> Iterator for Iter<'a> {
+    type Item = &'a Expression;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.finish {
+            return None;
+        }
+        match self.next {
+            Expression::Atom(Atom::Nil) => {
+                self.finish = true;
+                None
+            }
+            expr @ Expression::Atom(_) => {
+                self.finish = true;
+                Some(expr)
+            }
+            Expression::Cons(c) => {
+                self.next = c.cdr();
+                Some(c.car())
+            }
+        }
     }
 }
 

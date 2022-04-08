@@ -34,6 +34,9 @@ impl Context {
     }
 
     fn get_variable(&self, symbol: &str) -> Result<Expression, Error> {
+        if symbol == "t" {
+            return Ok(Expression::t());
+        }
         self.variable_provider
             .as_ref()
             .and_then(|p| p.get(symbol))
@@ -56,6 +59,8 @@ impl Context {
 
     fn call_builtin(&mut self, symbol: &str, cdr: &Expression) -> Result<Expression, Error> {
         match symbol {
+            "and" | "&" => self.op_and(cdr),
+            "or" | "|" => self.op_or(cdr),
             "equals" | "eq" | "=" | "==" => self.op_equals(cdr),
             "noteq" | "neq" | "!=" | "/=" => self.op_noteq(cdr),
             _ => Err(Error::VoidFunction),
@@ -95,6 +100,28 @@ impl Context {
         } else {
             Ok(Expression::Atom(Atom::Nil))
         }
+    }
+
+    fn op_and(&mut self, cdr: &Expression) -> Result<Expression, Error> {
+        let mut last = Expression::t();
+        for expr in cdr.iter() {
+            last = self.evaluate(expr)?;
+            if last.is_nil() {
+                break;
+            }
+        }
+        Ok(last)
+    }
+
+    fn op_or(&mut self, cdr: &Expression) -> Result<Expression, Error> {
+        let mut last = Expression::Atom(Atom::Nil);
+        for expr in cdr.iter() {
+            last = self.evaluate(expr)?;
+            if !last.is_nil() {
+                break;
+            }
+        }
+        Ok(last)
     }
 }
 
@@ -191,6 +218,74 @@ mod tests {
                 Cons::new(
                     Box::new(Atom::Integer(1).into()),
                     Box::new(Atom::Integer(2).into()),
+                )
+                .into(),
+            ),
+        )
+        .into();
+        let mut context = Context::new();
+        match context.evaluate(&expr) {
+            Ok(ret) => assert_eq!(Expression::t(), ret),
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn and_empty() {
+        let expr = Cons::new(
+            Box::new(Atom::Symbol("and".to_string()).into()),
+            Box::new(Atom::Nil.into()),
+        )
+        .into();
+        let mut context = Context::new();
+        match context.evaluate(&expr) {
+            Ok(ret) => assert_eq!(Expression::t(), ret),
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn and_t_t() {
+        let expr = Cons::new(
+            Box::new(Atom::Symbol("and".to_string()).into()),
+            Box::new(
+                Cons::new(
+                    Box::new(Atom::Symbol("t".to_string()).into()),
+                    Box::new(Atom::Symbol("t".to_string()).into()),
+                )
+                .into(),
+            ),
+        )
+        .into();
+        let mut context = Context::new();
+        match context.evaluate(&expr) {
+            Ok(ret) => assert_eq!(Expression::t(), ret),
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn or_empty() {
+        let expr = Cons::new(
+            Box::new(Atom::Symbol("or".to_string()).into()),
+            Box::new(Atom::Nil.into()),
+        )
+        .into();
+        let mut context = Context::new();
+        match context.evaluate(&expr) {
+            Ok(ret) => assert_eq!(Expression::Atom(Atom::Nil), ret),
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn or_t_nil() {
+        let expr = Cons::new(
+            Box::new(Atom::Symbol("or".to_string()).into()),
+            Box::new(
+                Cons::new(
+                    Box::new(Atom::Symbol("t".to_string()).into()),
+                    Box::new(Atom::Nil.into()),
                 )
                 .into(),
             ),
