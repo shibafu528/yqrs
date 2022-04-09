@@ -1,4 +1,4 @@
-use crate::v1::expr::{Atom, Expression};
+use crate::v1::expr::{Atom, Cons, Expression};
 use std::collections::HashMap;
 
 pub struct Context {
@@ -82,6 +82,7 @@ impl Context {
             "equals" | "eq" | "=" | "==" => self.op_equals(cdr),
             "noteq" | "neq" | "!=" | "/=" => self.op_noteq(cdr),
             "contains" | "in" => self.op_contains(cdr),
+            "list" => self.op_list(cdr),
             _ => Err(Error::VoidFunction),
         }
     }
@@ -175,6 +176,16 @@ impl Context {
             }
             _ => Ok(Expression::Atom(Atom::Nil)),
         }
+    }
+
+    fn op_list(&mut self, cdr: &Expression) -> Result<Expression, Error> {
+        let mut list = vec![];
+        for expr in cdr.iter() {
+            list.push(self.evaluate(expr)?);
+        }
+        Ok(list.into_iter().rfold(Expression::Atom(Atom::Nil), |cdr, car| {
+            Expression::Cons(Cons::new(Box::new(car), Box::new(cdr)))
+        }))
     }
 }
 
@@ -360,6 +371,17 @@ mod tests {
         let mut context = Context::new();
         match context.evaluate(&expr) {
             Ok(ret) => assert_eq!(Expression::t(), ret),
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn list() {
+        let expr = yq!((list 1 2 3 4 5));
+        let expect = yq!((1 2 3 4 5));
+        let mut context = Context::new();
+        match context.evaluate(&expr) {
+            Ok(ret) => assert_eq!(expect, ret),
             Err(_) => assert!(false),
         }
     }
