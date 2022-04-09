@@ -1,3 +1,4 @@
+use crate::v1::eval::Error::WrongNumberOfArguments;
 use crate::v1::expr::{Atom, Expression};
 use std::collections::HashMap;
 
@@ -81,6 +82,7 @@ impl Context {
         match symbol {
             "and" | "&" => self.op_and(cdr),
             "or" | "|" => self.op_or(cdr),
+            "not" | "!" => self.op_not(cdr),
             "equals" | "eq" | "=" | "==" => self.op_equals(cdr),
             "noteq" | "neq" | "!=" | "/=" => self.op_noteq(cdr),
             _ => Err(Error::VoidFunction),
@@ -143,6 +145,14 @@ impl Context {
         }
         Ok(last)
     }
+
+    fn op_not(&mut self, cdr: &Expression) -> Result<Expression, Error> {
+        if let Some(first) = cdr.iter().next() {
+            Ok(self.evaluate(first)?.not())
+        } else {
+            Err(WrongNumberOfArguments("not 0".to_string()))
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -150,6 +160,7 @@ pub enum Error {
     VoidFunction,
     InvalidFunction,
     VoidVariable(String),
+    WrongNumberOfArguments(String),
 }
 
 pub trait VariableProvider {
@@ -309,6 +320,40 @@ mod tests {
                 )
                 .into(),
             ),
+        )
+        .into();
+        let mut context = Context::new();
+        match context.evaluate(&expr) {
+            Ok(ret) => assert_eq!(Expression::t(), ret),
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn not_t_is_nil() {
+        let expr = Cons::new(
+            Box::new(Atom::Symbol("not".to_string()).into()),
+            Box::new(
+                Cons::new(
+                    Box::new(Atom::Symbol("t".to_string()).into()),
+                    Box::new(Atom::Nil.into()),
+                )
+                .into(),
+            ),
+        )
+        .into();
+        let mut context = Context::new();
+        match context.evaluate(&expr) {
+            Ok(ret) => assert_eq!(Expression::Atom(Atom::Nil), ret),
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn not_nil_is_t() {
+        let expr = Cons::new(
+            Box::new(Atom::Symbol("not".to_string()).into()),
+            Box::new(Cons::new(Box::new(Atom::Nil.into()), Box::new(Atom::Nil.into())).into()),
         )
         .into();
         let mut context = Context::new();

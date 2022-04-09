@@ -107,6 +107,7 @@ pub enum EvalError {
     VoidFunction,
     InvalidFunction,
     VoidVariable,
+    WrongNumberOfArguments,
 }
 
 #[no_mangle]
@@ -242,6 +243,9 @@ pub unsafe extern "C" fn yq_v1_context_register_function(
                 EvalError::VoidFunction => Err(eval::Error::VoidFunction),
                 EvalError::InvalidFunction => Err(eval::Error::InvalidFunction),
                 EvalError::VoidVariable => Err(eval::Error::VoidVariable("*unknown*".to_string())),
+                EvalError::WrongNumberOfArguments => {
+                    Err(eval::Error::WrongNumberOfArguments("".to_string()))
+                }
             }
         },
     );
@@ -303,6 +307,9 @@ pub unsafe extern "C" fn yq_v1_context_set_method_dispatcher(
                 EvalError::VoidFunction => Err(eval::Error::VoidFunction),
                 EvalError::InvalidFunction => Err(eval::Error::InvalidFunction),
                 EvalError::VoidVariable => Err(eval::Error::VoidVariable("*unknown*".to_string())),
+                EvalError::WrongNumberOfArguments => {
+                    Err(eval::Error::WrongNumberOfArguments("".to_string()))
+                }
             }
         }
     }
@@ -325,6 +332,7 @@ pub unsafe extern "C" fn yq_v1_context_get_last_error(context: *mut Context) -> 
             Error::VoidFunction => EvalError::VoidFunction,
             Error::InvalidFunction => EvalError::InvalidFunction,
             Error::VoidVariable(_) => EvalError::VoidVariable,
+            Error::WrongNumberOfArguments(_) => EvalError::WrongNumberOfArguments,
         },
         None => EvalError::Success,
     }

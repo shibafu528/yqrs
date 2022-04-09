@@ -12,6 +12,14 @@ impl Expression {
         }
     }
 
+    pub fn not(&self) -> Expression {
+        if self.is_nil() {
+            Expression::t()
+        } else {
+            Expression::Atom(Atom::Nil)
+        }
+    }
+
     pub fn iter(&self) -> Iter {
         Iter {
             next: self,
