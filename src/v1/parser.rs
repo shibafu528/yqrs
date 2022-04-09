@@ -7,11 +7,7 @@ use thiserror::Error;
 const DEFAULT_QUERY: &str = "from all";
 
 pub fn parse(query: &str) -> Result<Query, ParseError> {
-    let query = if query.trim().is_empty() {
-        DEFAULT_QUERY
-    } else {
-        query
-    };
+    let query = if query.trim().is_empty() { DEFAULT_QUERY } else { query };
 
     let mut lex = Lexer::new(query.trim()).peekable();
 

@@ -3,10 +3,7 @@ use crate::v1::expr::{Atom, Expression};
 use std::collections::HashMap;
 
 pub struct Context {
-    functions: HashMap<
-        String,
-        Box<dyn FnMut(&mut Context, &str, &Expression) -> Result<Expression, Error>>,
-    >,
+    functions: HashMap<String, Box<dyn FnMut(&mut Context, &str, &Expression) -> Result<Expression, Error>>>,
     variable_provider: Option<Box<dyn VariableProvider>>,
     method_dispatcher: Option<Box<dyn MethodDispatcher>>,
 }
@@ -168,12 +165,7 @@ pub trait VariableProvider {
 }
 
 pub trait MethodDispatcher {
-    fn dispatch(
-        &self,
-        symbol: &str,
-        receiver: Atom,
-        cddr: &Expression,
-    ) -> Result<Expression, Error>;
+    fn dispatch(&self, symbol: &str, receiver: Atom, cddr: &Expression) -> Result<Expression, Error>;
 }
 
 #[cfg(test)]
@@ -185,13 +177,7 @@ mod tests {
     fn equals_equal() {
         let expr = Cons::new(
             Box::new(Atom::Symbol("equals".to_string()).into()),
-            Box::new(
-                Cons::new(
-                    Box::new(Atom::Integer(1).into()),
-                    Box::new(Atom::Integer(1).into()),
-                )
-                .into(),
-            ),
+            Box::new(Cons::new(Box::new(Atom::Integer(1).into()), Box::new(Atom::Integer(1).into())).into()),
         )
         .into();
         let mut context = Context::new();
@@ -205,13 +191,7 @@ mod tests {
     fn equals_not_equal() {
         let expr = Cons::new(
             Box::new(Atom::Symbol("equals".to_string()).into()),
-            Box::new(
-                Cons::new(
-                    Box::new(Atom::Integer(1).into()),
-                    Box::new(Atom::Integer(2).into()),
-                )
-                .into(),
-            ),
+            Box::new(Cons::new(Box::new(Atom::Integer(1).into()), Box::new(Atom::Integer(2).into())).into()),
         )
         .into();
         let mut context = Context::new();
@@ -225,13 +205,7 @@ mod tests {
     fn noteq_equal() {
         let expr = Cons::new(
             Box::new(Atom::Symbol("noteq".to_string()).into()),
-            Box::new(
-                Cons::new(
-                    Box::new(Atom::Integer(1).into()),
-                    Box::new(Atom::Integer(1).into()),
-                )
-                .into(),
-            ),
+            Box::new(Cons::new(Box::new(Atom::Integer(1).into()), Box::new(Atom::Integer(1).into())).into()),
         )
         .into();
         let mut context = Context::new();
@@ -245,13 +219,7 @@ mod tests {
     fn noteq_not_equal() {
         let expr = Cons::new(
             Box::new(Atom::Symbol("noteq".to_string()).into()),
-            Box::new(
-                Cons::new(
-                    Box::new(Atom::Integer(1).into()),
-                    Box::new(Atom::Integer(2).into()),
-                )
-                .into(),
-            ),
+            Box::new(Cons::new(Box::new(Atom::Integer(1).into()), Box::new(Atom::Integer(2).into())).into()),
         )
         .into();
         let mut context = Context::new();
@@ -367,20 +335,11 @@ mod tests {
     fn call_foreign_method() {
         struct Dispatcher {}
         impl MethodDispatcher for Dispatcher {
-            fn dispatch(
-                &self,
-                symbol: &str,
-                receiver: Atom,
-                cddr: &Expression,
-            ) -> Result<Expression, Error> {
+            fn dispatch(&self, symbol: &str, receiver: Atom, cddr: &Expression) -> Result<Expression, Error> {
                 assert_eq!("test_method", symbol);
                 assert_eq!(Atom::Reference(1024), receiver);
 
-                let args: Expression = Cons::new(
-                    Box::new(Atom::Integer(1).into()),
-                    Box::new(Atom::Nil.into()),
-                )
-                .into();
+                let args: Expression = Cons::new(Box::new(Atom::Integer(1).into()), Box::new(Atom::Nil.into())).into();
                 assert_eq!(&args, cddr);
 
                 Ok(Atom::Nil.into())
@@ -393,13 +352,7 @@ mod tests {
             Box::new(
                 Cons::new(
                     Box::new(Atom::Reference(1024).into()),
-                    Box::new(
-                        Cons::new(
-                            Box::new(Atom::Integer(1).into()),
-                            Box::new(Atom::Nil.into()),
-                        )
-                        .into(),
-                    ),
+                    Box::new(Cons::new(Box::new(Atom::Integer(1).into()), Box::new(Atom::Nil.into())).into()),
                 )
                 .into(),
             ),
@@ -417,23 +370,13 @@ mod tests {
     fn call_foreign_function() {
         let expr = Cons::new(
             Box::new(Atom::Symbol("test_function".to_string()).into()),
-            Box::new(
-                Cons::new(
-                    Box::new(Atom::Integer(1).into()),
-                    Box::new(Atom::Nil.into()),
-                )
-                .into(),
-            ),
+            Box::new(Cons::new(Box::new(Atom::Integer(1).into()), Box::new(Atom::Nil.into())).into()),
         )
         .into();
         let mut context = Context::new();
         context.register_function("test_function", |_, symbol, cddr| {
             assert_eq!(symbol, "test_function");
-            let args: Expression = Cons::new(
-                Box::new(Atom::Integer(1).into()),
-                Box::new(Atom::Nil.into()),
-            )
-            .into();
+            let args: Expression = Cons::new(Box::new(Atom::Integer(1).into()), Box::new(Atom::Nil.into())).into();
             assert_eq!(&args, cddr);
             Ok(Expression::Atom(Atom::Nil))
         });

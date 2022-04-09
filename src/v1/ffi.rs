@@ -16,10 +16,7 @@ pub struct StringRef {
 
 impl StringRef {
     fn null() -> Self {
-        StringRef {
-            ptr: null(),
-            len: 0,
-        }
+        StringRef { ptr: null(), len: 0 }
     }
 }
 
@@ -126,10 +123,7 @@ pub unsafe extern "C" fn yq_v1_parse(query: *const c_char, out: *mut *mut Query)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn yq_v1_query_get_source(
-    query: *const Query,
-    index: usize,
-) -> *const Source {
+pub unsafe extern "C" fn yq_v1_query_get_source(query: *const Query, index: usize) -> *const Source {
     if query.is_null() {
         return null();
     }
@@ -199,10 +193,7 @@ pub unsafe extern "C" fn yq_v1_context_free(context: *mut Context) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn yq_v1_context_eval(
-    context: *mut Context,
-    expr: *const Expression,
-) -> *mut Expression {
+pub unsafe extern "C" fn yq_v1_context_eval(context: *mut Context, expr: *const Expression) -> *mut Expression {
     if context.is_null() {
         return null_mut();
     }
@@ -225,9 +216,9 @@ pub unsafe extern "C" fn yq_v1_context_register_function(
     if context.is_null() {
         return;
     }
-    (*context).context.register_function(
-        CStr::from_ptr(symbol).to_str().unwrap(),
-        move |_, symbol, cdr| {
+    (*context)
+        .context
+        .register_function(CStr::from_ptr(symbol).to_str().unwrap(), move |_, symbol, cdr| {
             let symbol = CString::new(symbol).unwrap();
             let mut result = null_mut();
             let error = function(context, symbol.as_ptr(), cdr, &mut result);
@@ -243,12 +234,9 @@ pub unsafe extern "C" fn yq_v1_context_register_function(
                 EvalError::VoidFunction => Err(eval::Error::VoidFunction),
                 EvalError::InvalidFunction => Err(eval::Error::InvalidFunction),
                 EvalError::VoidVariable => Err(eval::Error::VoidVariable("*unknown*".to_string())),
-                EvalError::WrongNumberOfArguments => {
-                    Err(eval::Error::WrongNumberOfArguments("".to_string()))
-                }
+                EvalError::WrongNumberOfArguments => Err(eval::Error::WrongNumberOfArguments("".to_string())),
             }
-        },
-    );
+        });
 }
 
 #[no_mangle]
@@ -285,12 +273,7 @@ pub unsafe extern "C" fn yq_v1_context_set_method_dispatcher(
 ) {
     struct CMethodDispatcher(MethodDispatcherCallback);
     impl MethodDispatcher for CMethodDispatcher {
-        fn dispatch(
-            &self,
-            symbol: &str,
-            receiver: Atom,
-            cddr: &Expression,
-        ) -> Result<Expression, Error> {
+        fn dispatch(&self, symbol: &str, receiver: Atom, cddr: &Expression) -> Result<Expression, Error> {
             let symbol = CString::new(symbol).unwrap();
             let receiver = Expression::Atom(receiver);
             let mut result = null_mut();
@@ -307,9 +290,7 @@ pub unsafe extern "C" fn yq_v1_context_set_method_dispatcher(
                 EvalError::VoidFunction => Err(eval::Error::VoidFunction),
                 EvalError::InvalidFunction => Err(eval::Error::InvalidFunction),
                 EvalError::VoidVariable => Err(eval::Error::VoidVariable("*unknown*".to_string())),
-                EvalError::WrongNumberOfArguments => {
-                    Err(eval::Error::WrongNumberOfArguments("".to_string()))
-                }
+                EvalError::WrongNumberOfArguments => Err(eval::Error::WrongNumberOfArguments("".to_string())),
             }
         }
     }

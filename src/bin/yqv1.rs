@@ -20,9 +20,7 @@ fn main() {
     let mut variables = HashMap::new();
     for v in &args.value {
         match v.split_once('=') {
-            Some((k, v)) => {
-                variables.insert(k.to_string(), Expression::Atom(Atom::String(v.to_string())))
-            }
+            Some((k, v)) => variables.insert(k.to_string(), Expression::Atom(Atom::String(v.to_string()))),
             _ => {
                 eprintln!("--value format must be 'key=value'");
                 process::exit(1);

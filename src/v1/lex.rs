@@ -38,10 +38,7 @@ impl<'a> Iterator for Lexer<'a> {
                         match char {
                             ' ' | '\t' | '\r' | '\n' | '"' | '\'' | ',' | ':' | '(' | ')' => {
                                 self.rest = Some((pos, char));
-                                return Some(Ok(Token::Literal(
-                                    buf.into_iter().collect(),
-                                    TokenMeta { pos: p },
-                                )));
+                                return Some(Ok(Token::Literal(buf.into_iter().collect(), TokenMeta { pos: p })));
                             }
                             _ => buf.push(char),
                         }
@@ -67,10 +64,7 @@ impl<'a> Iterator for Lexer<'a> {
                 }
                 None => {
                     return match begin {
-                        Some(pos) => Some(Ok(Token::Literal(
-                            buf.into_iter().collect(),
-                            TokenMeta { pos },
-                        ))),
+                        Some(pos) => Some(Ok(Token::Literal(buf.into_iter().collect(), TokenMeta { pos }))),
                         None => None,
                     }
                 }
