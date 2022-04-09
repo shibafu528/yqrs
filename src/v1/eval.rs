@@ -147,7 +147,7 @@ impl Context {
         if let Some(first) = cdr.iter().next() {
             Ok(self.evaluate(first)?.not())
         } else {
-            Err(WrongNumberOfArguments("not 0".to_string()))
+            Err(WrongNumberOfArguments)
         }
     }
 }
@@ -157,7 +157,7 @@ pub enum Error {
     VoidFunction,
     InvalidFunction,
     VoidVariable(String),
-    WrongNumberOfArguments(String),
+    WrongNumberOfArguments,
 }
 
 pub trait VariableProvider {
