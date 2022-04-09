@@ -69,6 +69,13 @@ impl From<ParseError> for ParseStatus {
     }
 }
 
+type Function = extern "C" fn(
+    context: *mut Context,
+    symbol: *const c_char,
+    cdr: *const Expression,
+    result: *mut *mut Expression,
+) -> EvalError;
+
 type VariableProviderCallback = extern "C" fn(symbol: *const c_char) -> *mut Expression;
 
 type MethodDispatcherCallback = extern "C" fn(
@@ -206,6 +213,38 @@ pub unsafe extern "C" fn yq_v1_context_eval(
             null_mut()
         }
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_context_register_function(
+    context: *mut Context,
+    symbol: *const c_char,
+    function: Function,
+) {
+    if context.is_null() {
+        return;
+    }
+    (*context).context.register_function(
+        CStr::from_ptr(symbol).to_str().unwrap(),
+        move |_, symbol, cdr| {
+            let symbol = CString::new(symbol).unwrap();
+            let mut result = null_mut();
+            let error = function(context, symbol.as_ptr(), cdr, &mut result);
+
+            let expr = if result.is_null() {
+                Expression::Atom(Atom::Nil)
+            } else {
+                *unsafe { Box::from_raw(result) }
+            };
+
+            match error {
+                EvalError::Success => Ok(expr),
+                EvalError::VoidFunction => Err(eval::Error::VoidFunction),
+                EvalError::InvalidFunction => Err(eval::Error::InvalidFunction),
+                EvalError::VoidVariable => Err(eval::Error::VoidVariable("*unknown*".to_string())),
+            }
+        },
+    );
 }
 
 #[no_mangle]

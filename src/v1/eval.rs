@@ -1,6 +1,9 @@
 use crate::v1::expr::{Atom, Expression};
+use std::collections::HashMap;
 
 pub struct Context {
+    functions:
+        HashMap<String, Box<dyn Fn(&mut Context, &str, &Expression) -> Result<Expression, Error>>>,
     variable_provider: Option<Box<dyn VariableProvider>>,
     method_dispatcher: Option<Box<dyn MethodDispatcher>>,
 }
@@ -8,6 +11,7 @@ pub struct Context {
 impl Context {
     pub fn new() -> Self {
         Context {
+            functions: HashMap::new(),
             variable_provider: None,
             method_dispatcher: None,
         }
@@ -23,6 +27,14 @@ impl Context {
                 _ => Err(Error::InvalidFunction),
             },
         }
+    }
+
+    pub fn register_function(
+        &mut self,
+        symbol: &str,
+        f: impl Fn(&mut Context, &str, &Expression) -> Result<Expression, Error> + 'static,
+    ) {
+        self.functions.insert(symbol.to_string(), Box::new(f));
     }
 
     pub fn set_variable_provider(&mut self, provider: Box<dyn VariableProvider>) {
@@ -52,6 +64,12 @@ impl Context {
                     None => Err(Error::VoidFunction),
                 };
             }
+        }
+        // dispatch registered functions
+        if let Some((s, f)) = self.functions.remove_entry(symbol) {
+            let result = f(self, symbol, cdr);
+            self.functions.insert(s, f);
+            return result;
         }
         // dispatch builtins
         self.call_builtin(symbol, cdr)
@@ -342,6 +360,36 @@ mod tests {
         .into();
         let mut context = Context::new();
         context.set_method_dispatcher(dispatcher);
+        match context.evaluate(&expr) {
+            Ok(ret) => assert_eq!(Expression::Atom(Atom::Nil), ret),
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn call_foreign_function() {
+        let expr = Cons::new(
+            Box::new(Atom::Symbol("test_function".to_string()).into()),
+            Box::new(
+                Cons::new(
+                    Box::new(Atom::Integer(1).into()),
+                    Box::new(Atom::Nil.into()),
+                )
+                .into(),
+            ),
+        )
+        .into();
+        let mut context = Context::new();
+        context.register_function("test_function", |_, symbol, cddr| {
+            assert_eq!(symbol, "test_function");
+            let args: Expression = Cons::new(
+                Box::new(Atom::Integer(1).into()),
+                Box::new(Atom::Nil.into()),
+            )
+            .into();
+            assert_eq!(&args, cddr);
+            Ok(Expression::Atom(Atom::Nil))
+        });
         match context.evaluate(&expr) {
             Ok(ret) => assert_eq!(Expression::Atom(Atom::Nil), ret),
             Err(_) => assert!(false),
