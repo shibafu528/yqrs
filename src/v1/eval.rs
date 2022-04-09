@@ -82,6 +82,7 @@ impl Context {
             "not" | "!" => self.op_not(cdr),
             "equals" | "eq" | "=" | "==" => self.op_equals(cdr),
             "noteq" | "neq" | "!=" | "/=" => self.op_noteq(cdr),
+            "contains" | "in" => self.op_contains(cdr),
             _ => Err(Error::VoidFunction),
         }
     }
@@ -150,6 +151,32 @@ impl Context {
             Err(WrongNumberOfArguments)
         }
     }
+
+    fn op_contains(&mut self, cdr: &Expression) -> Result<Expression, Error> {
+        let mut iter = cdr.iter();
+        let haystack = self.evaluate(iter.next().ok_or_else(|| WrongNumberOfArguments)?)?;
+        let needle = self.evaluate(iter.next().ok_or_else(|| WrongNumberOfArguments)?)?;
+        match (haystack, needle) {
+            (
+                Expression::Atom(Atom::Symbol(h)) | Expression::Atom(Atom::String(h)),
+                Expression::Atom(Atom::Symbol(n)) | Expression::Atom(Atom::String(n)),
+            ) => {
+                if h.contains(&n) {
+                    Ok(Expression::t())
+                } else {
+                    Ok(Expression::Atom(Atom::Nil))
+                }
+            }
+            (list @ Expression::Cons(_), needle) => {
+                if list.iter().any(|item| *item == needle) {
+                    Ok(Expression::t())
+                } else {
+                    Ok(Expression::Atom(Atom::Nil))
+                }
+            }
+            _ => Ok(Expression::Atom(Atom::Nil)),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -172,14 +199,11 @@ pub trait MethodDispatcher {
 mod tests {
     use super::*;
     use crate::v1::expr::Cons;
+    use crate::v1::macros::*;
 
     #[test]
     fn equals_equal() {
-        let expr = Cons::new(
-            Box::new(Atom::Symbol("equals".to_string()).into()),
-            Box::new(Cons::new(Box::new(Atom::Integer(1).into()), Box::new(Atom::Integer(1).into())).into()),
-        )
-        .into();
+        let expr = yq!((equals 1 1));
         let mut context = Context::new();
         match context.evaluate(&expr) {
             Ok(ret) => assert_eq!(Expression::t(), ret),
@@ -324,6 +348,16 @@ mod tests {
             Box::new(Cons::new(Box::new(Atom::Nil.into()), Box::new(Atom::Nil.into())).into()),
         )
         .into();
+        let mut context = Context::new();
+        match context.evaluate(&expr) {
+            Ok(ret) => assert_eq!(Expression::t(), ret),
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn contains_string() {
+        let expr = yq!((contains "lorem ipsum" "ore"));
         let mut context = Context::new();
         match context.evaluate(&expr) {
             Ok(ret) => assert_eq!(Expression::t(), ret),
