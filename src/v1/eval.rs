@@ -84,6 +84,10 @@ impl Context {
             "contains" | "in" => self.op_contains(cdr),
             "list" => self.op_list(cdr),
             "quote" => Ok(cdr.clone()),
+            "+" => self.op_add(cdr),
+            "-" => self.op_subtract(cdr),
+            "*" => self.op_multiply(cdr),
+            "/" => self.op_divide(cdr),
             _ => Err(Error::VoidFunction),
         }
     }
@@ -188,6 +192,56 @@ impl Context {
             Expression::Cons(Cons::new(Box::new(car), Box::new(cdr)))
         }))
     }
+
+    fn op_add(&mut self, cdr: &Expression) -> Result<Expression, Error> {
+        let mut acc = 0;
+        for expr in cdr.iter() {
+            acc += self.evaluate(expr).and_then(expr_to_int)?;
+        }
+        Ok(Expression::Atom(Atom::Integer(acc)))
+    }
+
+    fn op_subtract(&mut self, cdr: &Expression) -> Result<Expression, Error> {
+        let mut acc = 0;
+        for expr in cdr.iter() {
+            acc -= self.evaluate(expr).and_then(expr_to_int)?;
+        }
+        Ok(Expression::Atom(Atom::Integer(acc)))
+    }
+
+    fn op_multiply(&mut self, cdr: &Expression) -> Result<Expression, Error> {
+        let mut acc = 1;
+        for expr in cdr.iter() {
+            acc *= self.evaluate(expr).and_then(expr_to_int)?;
+        }
+        Ok(Expression::Atom(Atom::Integer(acc)))
+    }
+
+    fn op_divide(&mut self, cdr: &Expression) -> Result<Expression, Error> {
+        let mut iter = cdr.iter();
+        let mut acc = iter
+            .next()
+            .ok_or_else(|| Error::WrongTypeArgument)
+            .and_then(|expr| self.evaluate(expr))
+            .and_then(expr_to_int)?;
+        for expr in iter {
+            acc /= self.evaluate(expr).and_then(expr_to_int)?;
+        }
+        Ok(Expression::Atom(Atom::Integer(acc)))
+    }
+
+    fn op_modulo(&mut self, cdr: &Expression) -> Result<Expression, Error> {
+        let mut iter = cdr.iter();
+        let mut acc = iter
+            .next()
+            .ok_or_else(|| Error::WrongTypeArgument)
+            .and_then(|expr| self.evaluate(expr))
+            .and_then(expr_to_int)?;
+        for expr in iter {
+            acc %= self.evaluate(expr).and_then(expr_to_int)?;
+        }
+        Ok(Expression::Atom(Atom::Integer(acc)))
+    }
 }
 
 #[derive(Debug)]
@@ -196,6 +250,7 @@ pub enum Error {
     InvalidFunction,
     VoidVariable(String),
     WrongNumberOfArguments,
+    WrongTypeArgument,
 }
 
 pub trait VariableProvider {
@@ -204,6 +259,17 @@ pub trait VariableProvider {
 
 pub trait MethodDispatcher {
     fn dispatch(&self, symbol: &str, receiver: Atom, cddr: &Expression) -> Result<Expression, Error>;
+}
+
+fn expr_to_int(expr: Expression) -> Result<i64, Error> {
+    match expr {
+        Expression::Atom(Atom::Integer(i)) => Ok(i),
+        Expression::Atom(Atom::Float(f)) => Ok(f as i64),
+        Expression::Atom(Atom::String(s)) | Expression::Atom(Atom::Symbol(s)) => {
+            s.as_str().parse().map_err(|_| Error::WrongTypeArgument)
+        }
+        _ => Err(Error::WrongTypeArgument),
+    }
 }
 
 #[cfg(test)]
