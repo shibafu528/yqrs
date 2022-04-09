@@ -83,6 +83,7 @@ impl Context {
             "noteq" | "neq" | "!=" | "/=" => self.op_noteq(cdr),
             "contains" | "in" => self.op_contains(cdr),
             "list" => self.op_list(cdr),
+            "quote" => Ok(cdr.clone()),
             _ => Err(Error::VoidFunction),
         }
     }
@@ -379,6 +380,17 @@ mod tests {
     fn list() {
         let expr = yq!((list 1 2 3 4 5));
         let expect = yq!((1 2 3 4 5));
+        let mut context = Context::new();
+        match context.evaluate(&expr) {
+            Ok(ret) => assert_eq!(expect, ret),
+            Err(_) => assert!(false),
+        }
+    }
+
+    #[test]
+    fn quote() {
+        let expr = yq!((quote foo (bar) baz));
+        let expect = yq!((foo (bar) baz));
         let mut context = Context::new();
         match context.evaluate(&expr) {
             Ok(ret) => assert_eq!(expect, ret),
