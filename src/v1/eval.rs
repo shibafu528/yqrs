@@ -2,8 +2,10 @@ use crate::v1::expr::{Atom, Expression};
 use std::collections::HashMap;
 
 pub struct Context {
-    functions:
-        HashMap<String, Box<dyn Fn(&mut Context, &str, &Expression) -> Result<Expression, Error>>>,
+    functions: HashMap<
+        String,
+        Box<dyn FnMut(&mut Context, &str, &Expression) -> Result<Expression, Error>>,
+    >,
     variable_provider: Option<Box<dyn VariableProvider>>,
     method_dispatcher: Option<Box<dyn MethodDispatcher>>,
 }
@@ -32,7 +34,7 @@ impl Context {
     pub fn register_function(
         &mut self,
         symbol: &str,
-        f: impl Fn(&mut Context, &str, &Expression) -> Result<Expression, Error> + 'static,
+        f: impl FnMut(&mut Context, &str, &Expression) -> Result<Expression, Error> + 'static,
     ) {
         self.functions.insert(symbol.to_string(), Box::new(f));
     }
@@ -66,7 +68,7 @@ impl Context {
             }
         }
         // dispatch registered functions
-        if let Some((s, f)) = self.functions.remove_entry(symbol) {
+        if let Some((s, mut f)) = self.functions.remove_entry(symbol) {
             let result = f(self, symbol, cdr);
             self.functions.insert(s, f);
             return result;
