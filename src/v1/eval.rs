@@ -1,4 +1,3 @@
-use crate::v1::eval::Error::WrongNumberOfArguments;
 use crate::v1::expr::{Atom, Expression};
 use std::collections::HashMap;
 
@@ -148,14 +147,14 @@ impl Context {
         if let Some(first) = cdr.iter().next() {
             Ok(self.evaluate(first)?.not())
         } else {
-            Err(WrongNumberOfArguments)
+            Err(Error::WrongNumberOfArguments)
         }
     }
 
     fn op_contains(&mut self, cdr: &Expression) -> Result<Expression, Error> {
         let mut iter = cdr.iter();
-        let haystack = self.evaluate(iter.next().ok_or_else(|| WrongNumberOfArguments)?)?;
-        let needle = self.evaluate(iter.next().ok_or_else(|| WrongNumberOfArguments)?)?;
+        let haystack = self.evaluate(iter.next().ok_or_else(|| Error::WrongNumberOfArguments)?)?;
+        let needle = self.evaluate(iter.next().ok_or_else(|| Error::WrongNumberOfArguments)?)?;
         match (haystack, needle) {
             (
                 Expression::Atom(Atom::Symbol(h)) | Expression::Atom(Atom::String(h)),
