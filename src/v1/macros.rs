@@ -25,6 +25,7 @@ impl Value for f64 {
     }
 }
 
+#[allow(unused_macros)]
 macro_rules! yq {
     // Symbol atom
     // foobar
@@ -78,4 +79,5 @@ macro_rules! yq {
     };
 }
 
+#[allow(unused_imports)]
 pub(crate) use yq;
