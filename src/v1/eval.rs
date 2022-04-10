@@ -45,13 +45,15 @@ impl Context {
     }
 
     fn get_variable(&self, symbol: &str) -> Result<Expression, Error> {
-        if symbol == "t" {
-            return Ok(Expression::t());
+        match symbol {
+            "nil" | "false" | "f" | "False" | "FALSE" => Ok(Expression::Atom(Atom::Nil)),
+            "t" | "true" | "True" | "TRUE" => Ok(Expression::t()),
+            _ => self
+                .variable_provider
+                .as_ref()
+                .and_then(|p| p.get(symbol))
+                .ok_or_else(|| Error::VoidVariable(symbol.to_string())),
         }
-        self.variable_provider
-            .as_ref()
-            .and_then(|p| p.get(symbol))
-            .ok_or_else(|| Error::VoidVariable(symbol.to_string()))
     }
 
     fn call(&mut self, symbol: &str, cdr: &Expression) -> Result<Expression, Error> {
