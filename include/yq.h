@@ -82,6 +82,10 @@ void yq_v1_context_set_variable_provider(struct YQ_Context *context,
 
 void yq_v1_expression_free(struct YQ_Expression *expr);
 
+const struct YQ_Expression *yq_v1_expression_get_car(const struct YQ_Expression *expr);
+
+const struct YQ_Expression *yq_v1_expression_get_cdr(const struct YQ_Expression *expr);
+
 double yq_v1_expression_get_float(const struct YQ_Expression *expr);
 
 int64_t yq_v1_expression_get_integer(const struct YQ_Expression *expr);

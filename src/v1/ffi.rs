@@ -443,6 +443,28 @@ pub unsafe extern "C" fn yq_v1_expression_get_reference(expr: *const Expression)
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn yq_v1_expression_get_car(expr: *const Expression) -> *const Expression {
+    if expr.is_null() {
+        return null();
+    }
+    match &*expr {
+        Expression::Cons(cons) => cons.car(),
+        _ => null(),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_expression_get_cdr(expr: *const Expression) -> *const Expression {
+    if expr.is_null() {
+        return null();
+    }
+    match &*expr {
+        Expression::Cons(cons) => cons.cdr(),
+        _ => null(),
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn yq_v1_expression_free(expr: *mut Expression) {
     if expr.is_null() {
         return;
