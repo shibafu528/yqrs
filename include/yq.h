@@ -45,7 +45,7 @@ typedef struct YQ_Query YQ_Query;
 
 typedef struct YQ_Source YQ_Source;
 
-typedef enum YQ_EvalError (*YQ_Function)(struct YQ_Context *context, const char *symbol, const struct YQ_Expression *cdr, struct YQ_Expression **result);
+typedef enum YQ_EvalError (*YQ_Function)(struct YQ_Context *context, void *user_data, const char *symbol, const struct YQ_Expression *cdr, struct YQ_Expression **result);
 
 typedef enum YQ_EvalError (*YQ_MethodDispatcherCallback)(const char *symbol, const struct YQ_Expression *receiver, const struct YQ_Expression *cddr, struct YQ_Expression **result);
 
@@ -71,7 +71,8 @@ struct YQ_Context *yq_v1_context_new(void);
 
 void yq_v1_context_register_function(struct YQ_Context *context,
                                      const char *symbol,
-                                     YQ_Function function);
+                                     YQ_Function function,
+                                     void *user_data);
 
 void yq_v1_context_set_method_dispatcher(struct YQ_Context *context,
                                          YQ_MethodDispatcherCallback callback);

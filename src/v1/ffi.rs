@@ -5,7 +5,7 @@ use crate::v1::lex::LexerError;
 use crate::v1::parser::ParseError;
 use crate::v1::query::{Query, Source};
 use libc::c_char;
-use std::ffi::{CStr, CString};
+use std::ffi::{c_void, CStr, CString};
 use std::ptr::{null, null_mut};
 
 #[repr(C)]
@@ -68,6 +68,7 @@ impl From<ParseError> for ParseStatus {
 
 type Function = extern "C" fn(
     context: *mut Context,
+    user_data: *mut c_void,
     symbol: *const c_char,
     cdr: *const Expression,
     result: *mut *mut Expression,
@@ -213,6 +214,7 @@ pub unsafe extern "C" fn yq_v1_context_register_function(
     context: *mut Context,
     symbol: *const c_char,
     function: Function,
+    user_data: *mut c_void,
 ) {
     if context.is_null() {
         return;
@@ -222,7 +224,7 @@ pub unsafe extern "C" fn yq_v1_context_register_function(
         .register_function(CStr::from_ptr(symbol).to_str().unwrap(), move |_, symbol, cdr| {
             let symbol = CString::new(symbol).unwrap();
             let mut result = null_mut();
-            let error = function(context, symbol.as_ptr(), cdr, &mut result);
+            let error = function(context, user_data, symbol.as_ptr(), cdr, &mut result);
 
             let expr = if result.is_null() {
                 Expression::Atom(Atom::Nil)
