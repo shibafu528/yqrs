@@ -88,6 +88,7 @@ impl Context {
             "-" => self.op_subtract(cdr),
             "*" => self.op_multiply(cdr),
             "/" => self.op_divide(cdr),
+            "%" | "mod" => self.op_modulo(cdr),
             _ => Err(Error::VoidFunction),
         }
     }
