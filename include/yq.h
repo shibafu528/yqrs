@@ -13,6 +13,8 @@ typedef enum YQ_EvalError {
   YQ_EvalError_VoidFunction,
   YQ_EvalError_InvalidFunction,
   YQ_EvalError_VoidVariable,
+  YQ_EvalError_WrongNumberOfArguments,
+  YQ_EvalError_WrongTypeArgument,
 } YQ_EvalError;
 
 typedef enum YQ_ExprType {
@@ -43,6 +45,8 @@ typedef struct YQ_Query YQ_Query;
 
 typedef struct YQ_Source YQ_Source;
 
+typedef enum YQ_EvalError (*YQ_Function)(struct YQ_Context *context, const char *symbol, const struct YQ_Expression *cdr, struct YQ_Expression **result);
+
 typedef enum YQ_EvalError (*YQ_MethodDispatcherCallback)(const char *symbol, const struct YQ_Expression *receiver, const struct YQ_Expression *cddr, struct YQ_Expression **result);
 
 typedef struct YQ_Expression *(*YQ_VariableProviderCallback)(const char *symbol);
@@ -64,6 +68,10 @@ void yq_v1_context_free(struct YQ_Context *context);
 enum YQ_EvalError yq_v1_context_get_last_error(struct YQ_Context *context);
 
 struct YQ_Context *yq_v1_context_new(void);
+
+void yq_v1_context_register_function(struct YQ_Context *context,
+                                     const char *symbol,
+                                     YQ_Function function);
 
 void yq_v1_context_set_method_dispatcher(struct YQ_Context *context,
                                          YQ_MethodDispatcherCallback callback);
