@@ -88,6 +88,9 @@ enum YQ_ExprType yq_v1_expression_get_type(const struct YQ_Expression *expr);
 
 bool yq_v1_expression_is_nil(const struct YQ_Expression *expr);
 
+struct YQ_Expression *yq_v1_expression_new_cons(struct YQ_Expression *car,
+                                                struct YQ_Expression *cdr);
+
 struct YQ_Expression *yq_v1_expression_new_float(double value);
 
 struct YQ_Expression *yq_v1_expression_new_integer(int64_t value);

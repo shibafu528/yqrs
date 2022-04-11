@@ -1,6 +1,6 @@
 use crate::v1::eval;
 use crate::v1::eval::{Error, MethodDispatcher, VariableProvider};
-use crate::v1::expr::{Atom, Expression};
+use crate::v1::expr::{Atom, Cons, Expression};
 use crate::v1::lex::LexerError;
 use crate::v1::parser::ParseError;
 use crate::v1::query::{Query, Source};
@@ -339,6 +339,22 @@ pub unsafe extern "C" fn yq_v1_expression_new_float(value: f64) -> *mut Expressi
 #[no_mangle]
 pub unsafe extern "C" fn yq_v1_expression_new_reference(r#ref: u64) -> *mut Expression {
     Box::into_raw(Box::new(Expression::Atom(Atom::Reference(r#ref))))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_expression_new_cons(car: *mut Expression, cdr: *mut Expression) -> *mut Expression {
+    Box::into_raw(Box::new(Expression::Cons(Cons::new(
+        if car.is_null() {
+            Box::new(Expression::nil())
+        } else {
+            Box::from_raw(car)
+        },
+        if cdr.is_null() {
+            Box::new(Expression::nil())
+        } else {
+            Box::from_raw(cdr)
+        },
+    ))))
 }
 
 #[no_mangle]
