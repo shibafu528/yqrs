@@ -71,8 +71,8 @@ type Function = extern "C" fn(
     user_data: *mut c_void,
     symbol: *const c_char,
     cdr: *const Expression,
-    result: *mut *mut Expression,
-) -> EvalError;
+    error: *mut bool,
+) -> *mut Expression;
 
 type VariableProviderCallback = extern "C" fn(symbol: *const c_char) -> *mut Expression;
 
@@ -80,12 +80,11 @@ type MethodDispatcherCallback = extern "C" fn(
     symbol: *const c_char,
     receiver: *const Expression,
     cddr: *const Expression,
-    result: *mut *mut Expression,
-) -> EvalError;
+    error: *mut bool,
+) -> *mut Expression;
 
 pub struct Context {
     context: eval::Context,
-    last_error: Option<eval::Error>,
 }
 
 #[repr(C)]
@@ -97,16 +96,6 @@ pub enum ExprType {
     Float,
     Reference,
     Cons,
-}
-
-#[repr(C)]
-pub enum EvalError {
-    Success = 0,
-    VoidFunction,
-    InvalidFunction,
-    VoidVariable,
-    WrongNumberOfArguments,
-    WrongTypeArgument,
 }
 
 #[no_mangle]
@@ -181,7 +170,6 @@ pub unsafe extern "C" fn yq_v1_source_get_argument(source: *const Source) -> Str
 pub unsafe extern "C" fn yq_v1_context_new() -> *mut Context {
     Box::into_raw(Box::new(Context {
         context: eval::Context::new(),
-        last_error: None,
     }))
 }
 
@@ -195,16 +183,20 @@ pub unsafe extern "C" fn yq_v1_context_free(context: *mut Context) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn yq_v1_context_eval(context: *mut Context, expr: *const Expression) -> *mut Expression {
+pub unsafe extern "C" fn yq_v1_context_eval(
+    context: *mut Context,
+    expr: *const Expression,
+    error: *mut bool,
+) -> *mut Expression {
     if context.is_null() {
         return null_mut();
     }
-    (*context).last_error = None;
+    *error = false;
     match (*context).context.evaluate(&*expr) {
         Ok(expr) => Box::into_raw(Box::new(expr)),
         Err(e) => {
-            (*context).last_error = Some(e);
-            null_mut()
+            *error = true;
+            Box::into_raw(Box::new(e))
         }
     }
 }
@@ -223,8 +215,8 @@ pub unsafe extern "C" fn yq_v1_context_register_function(
         .context
         .register_function(CStr::from_ptr(symbol).to_str().unwrap(), move |_, symbol, cdr| {
             let symbol = CString::new(symbol).unwrap();
-            let mut result = null_mut();
-            let error = function(context, user_data, symbol.as_ptr(), cdr, &mut result);
+            let mut error = false;
+            let result = function(context, user_data, symbol.as_ptr(), cdr, &mut error);
 
             let expr = if result.is_null() {
                 Expression::Atom(Atom::Nil)
@@ -232,13 +224,10 @@ pub unsafe extern "C" fn yq_v1_context_register_function(
                 *unsafe { Box::from_raw(result) }
             };
 
-            match error {
-                EvalError::Success => Ok(expr),
-                EvalError::VoidFunction => Err(eval::Error::VoidFunction),
-                EvalError::InvalidFunction => Err(eval::Error::InvalidFunction),
-                EvalError::VoidVariable => Err(eval::Error::VoidVariable("*unknown*".to_string())),
-                EvalError::WrongNumberOfArguments => Err(eval::Error::WrongNumberOfArguments),
-                EvalError::WrongTypeArgument => Err(eval::Error::WrongTypeArgument),
+            if error {
+                Err(expr)
+            } else {
+                Ok(expr)
             }
         });
 }
@@ -280,8 +269,8 @@ pub unsafe extern "C" fn yq_v1_context_set_method_dispatcher(
         fn dispatch(&self, symbol: &str, receiver: Atom, cddr: &Expression) -> Result<Expression, Error> {
             let symbol = CString::new(symbol).unwrap();
             let receiver = Expression::Atom(receiver);
-            let mut result = null_mut();
-            let error = self.0(symbol.as_ptr(), &receiver, cddr, &mut result);
+            let mut error = false;
+            let result = self.0(symbol.as_ptr(), &receiver, cddr, &mut error);
 
             let expr = if result.is_null() {
                 Expression::Atom(Atom::Nil)
@@ -289,13 +278,10 @@ pub unsafe extern "C" fn yq_v1_context_set_method_dispatcher(
                 *unsafe { Box::from_raw(result) }
             };
 
-            match error {
-                EvalError::Success => Ok(expr),
-                EvalError::VoidFunction => Err(eval::Error::VoidFunction),
-                EvalError::InvalidFunction => Err(eval::Error::InvalidFunction),
-                EvalError::VoidVariable => Err(eval::Error::VoidVariable("*unknown*".to_string())),
-                EvalError::WrongNumberOfArguments => Err(eval::Error::WrongNumberOfArguments),
-                EvalError::WrongTypeArgument => Err(eval::Error::WrongTypeArgument),
+            if error {
+                Err(expr)
+            } else {
+                Ok(expr)
             }
         }
     }
@@ -306,23 +292,6 @@ pub unsafe extern "C" fn yq_v1_context_set_method_dispatcher(
     (*context)
         .context
         .set_method_dispatcher(Box::new(CMethodDispatcher(callback)));
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn yq_v1_context_get_last_error(context: *mut Context) -> EvalError {
-    if context.is_null() {
-        return EvalError::Success;
-    }
-    match &(*context).last_error {
-        Some(e) => match e {
-            Error::VoidFunction => EvalError::VoidFunction,
-            Error::InvalidFunction => EvalError::InvalidFunction,
-            Error::VoidVariable(_) => EvalError::VoidVariable,
-            Error::WrongNumberOfArguments => EvalError::WrongNumberOfArguments,
-            Error::WrongTypeArgument => EvalError::WrongTypeArgument,
-        },
-        None => EvalError::Success,
-    }
 }
 
 #[no_mangle]

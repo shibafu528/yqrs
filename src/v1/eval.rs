@@ -22,8 +22,8 @@ impl Context {
             Expression::Atom(_) => Ok(expr.clone()),
             Expression::Cons(cons) => match cons.car() {
                 Expression::Atom(Atom::Symbol(sym)) => self.call(sym, cons.cdr()),
-                Expression::Atom(Atom::Nil) => Err(Error::VoidFunction),
-                _ => Err(Error::InvalidFunction),
+                Expression::Atom(Atom::Nil) => Err(error_void_function()),
+                _ => Err(error_invalid_function()),
             },
         }
     }
@@ -52,7 +52,7 @@ impl Context {
                 .variable_provider
                 .as_ref()
                 .and_then(|p| p.get(symbol))
-                .ok_or_else(|| Error::VoidVariable(symbol.to_string())),
+                .ok_or_else(|| error_void_variable(symbol.to_string())),
         }
     }
 
@@ -62,7 +62,7 @@ impl Context {
             if let Expression::Atom(a @ Atom::Reference(_)) = cdr.car() {
                 return match &self.method_dispatcher {
                     Some(d) => d.dispatch(symbol, a.clone(), cdr.cdr()),
-                    None => Err(Error::VoidFunction),
+                    None => Err(error_void_function()),
                 };
             }
         }
@@ -91,7 +91,7 @@ impl Context {
             "*" => self.op_multiply(cdr),
             "/" => self.op_divide(cdr),
             "%" | "mod" => self.op_modulo(cdr),
-            _ => Err(Error::VoidFunction),
+            _ => Err(error_void_function()),
         }
     }
 
@@ -156,14 +156,14 @@ impl Context {
         if let Some(first) = cdr.iter().next() {
             Ok(self.evaluate(first)?.not())
         } else {
-            Err(Error::WrongNumberOfArguments)
+            Err(error_wrong_number_of_arguments())
         }
     }
 
     fn op_contains(&mut self, cdr: &Expression) -> Result<Expression, Error> {
         let mut iter = cdr.iter();
-        let haystack = self.evaluate(iter.next().ok_or_else(|| Error::WrongNumberOfArguments)?)?;
-        let needle = self.evaluate(iter.next().ok_or_else(|| Error::WrongNumberOfArguments)?)?;
+        let haystack = self.evaluate(iter.next().ok_or_else(|| error_wrong_number_of_arguments())?)?;
+        let needle = self.evaluate(iter.next().ok_or_else(|| error_wrong_number_of_arguments())?)?;
         match (haystack, needle) {
             (
                 Expression::Atom(Atom::Symbol(h)) | Expression::Atom(Atom::String(h)),
@@ -224,7 +224,7 @@ impl Context {
         let mut iter = cdr.iter();
         let mut acc = iter
             .next()
-            .ok_or_else(|| Error::WrongTypeArgument)
+            .ok_or_else(|| error_wrong_type_argument())
             .and_then(|expr| self.evaluate(expr))
             .and_then(expr_to_int)?;
         for expr in iter {
@@ -237,7 +237,7 @@ impl Context {
         let mut iter = cdr.iter();
         let mut acc = iter
             .next()
-            .ok_or_else(|| Error::WrongTypeArgument)
+            .ok_or_else(|| error_wrong_type_argument())
             .and_then(|expr| self.evaluate(expr))
             .and_then(expr_to_int)?;
         for expr in iter {
@@ -247,14 +247,7 @@ impl Context {
     }
 }
 
-#[derive(Debug)]
-pub enum Error {
-    VoidFunction,
-    InvalidFunction,
-    VoidVariable(String),
-    WrongNumberOfArguments,
-    WrongTypeArgument,
-}
+pub type Error = Expression;
 
 pub trait VariableProvider {
     fn get(&self, symbol: &str) -> Option<Expression>;
@@ -269,10 +262,38 @@ fn expr_to_int(expr: Expression) -> Result<i64, Error> {
         Expression::Atom(Atom::Integer(i)) => Ok(i),
         Expression::Atom(Atom::Float(f)) => Ok(f as i64),
         Expression::Atom(Atom::String(s)) | Expression::Atom(Atom::Symbol(s)) => {
-            s.as_str().parse().map_err(|_| Error::WrongTypeArgument)
+            s.as_str().parse().map_err(|_| error_wrong_type_argument())
         }
-        _ => Err(Error::WrongTypeArgument),
+        _ => Err(error_wrong_type_argument()),
     }
+}
+
+fn error(typ: &str) -> Error {
+    error_with_data(typ, Expression::nil())
+}
+
+fn error_with_data(typ: &str, data: Expression) -> Error {
+    Expression::Cons(Cons::from(Atom::symbol(typ).into(), data))
+}
+
+fn error_void_function() -> Error {
+    error("void-function")
+}
+
+fn error_invalid_function() -> Error {
+    error("invalid-function")
+}
+
+fn error_void_variable(symbol: String) -> Error {
+    error_with_data("void-variable", Atom::Symbol(symbol).into())
+}
+
+fn error_wrong_number_of_arguments() -> Error {
+    error("wrong-number-of-arguments")
+}
+
+fn error_wrong_type_argument() -> Error {
+    error("wrong-type-argument")
 }
 
 #[cfg(test)]
@@ -471,7 +492,7 @@ mod tests {
     fn call_foreign_method() {
         struct Dispatcher {}
         impl MethodDispatcher for Dispatcher {
-            fn dispatch(&self, symbol: &str, receiver: Atom, cddr: &Expression) -> Result<Expression, Error> {
+            fn dispatch(&self, symbol: &str, receiver: Atom, cddr: &Expression) -> Result<Expression, Expression> {
                 assert_eq!("test_method", symbol);
                 assert_eq!(Atom::Reference(1024), receiver);
 

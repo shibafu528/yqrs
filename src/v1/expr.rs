@@ -27,6 +27,10 @@ impl Expression {
         }
     }
 
+    pub fn nil() -> Self {
+        Expression::Atom(Atom::Nil)
+    }
+
     pub fn t() -> Self {
         Expression::Atom(Atom::Symbol("t".to_string()))
     }
@@ -84,6 +88,13 @@ impl Cons {
         Cons { car, cdr }
     }
 
+    pub fn from(car: Expression, cdr: Expression) -> Self {
+        Cons {
+            car: Box::new(car),
+            cdr: Box::new(cdr),
+        }
+    }
+
     pub fn empty() -> Self {
         Cons {
             car: Box::new(Expression::Atom(Atom::Nil)),
@@ -115,6 +126,10 @@ pub enum Atom {
 }
 
 impl Atom {
+    pub fn symbol(s: &str) -> Self {
+        Atom::Symbol(s.to_string())
+    }
+
     pub fn is_nil(&self) -> bool {
         match self {
             Atom::Nil => true,

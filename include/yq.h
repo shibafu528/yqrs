@@ -8,15 +8,6 @@
 #include <stdlib.h>
 
 
-typedef enum YQ_EvalError {
-  YQ_EvalError_Success = 0,
-  YQ_EvalError_VoidFunction,
-  YQ_EvalError_InvalidFunction,
-  YQ_EvalError_VoidVariable,
-  YQ_EvalError_WrongNumberOfArguments,
-  YQ_EvalError_WrongTypeArgument,
-} YQ_EvalError;
-
 typedef enum YQ_ExprType {
   YQ_ExprType_Nil,
   YQ_ExprType_Symbol,
@@ -45,9 +36,9 @@ typedef struct YQ_Query YQ_Query;
 
 typedef struct YQ_Source YQ_Source;
 
-typedef enum YQ_EvalError (*YQ_Function)(struct YQ_Context *context, void *user_data, const char *symbol, const struct YQ_Expression *cdr, struct YQ_Expression **result);
+typedef struct YQ_Expression *(*YQ_Function)(struct YQ_Context *context, void *user_data, const char *symbol, const struct YQ_Expression *cdr, bool *error);
 
-typedef enum YQ_EvalError (*YQ_MethodDispatcherCallback)(const char *symbol, const struct YQ_Expression *receiver, const struct YQ_Expression *cddr, struct YQ_Expression **result);
+typedef struct YQ_Expression *(*YQ_MethodDispatcherCallback)(const char *symbol, const struct YQ_Expression *receiver, const struct YQ_Expression *cddr, bool *error);
 
 typedef struct YQ_Expression *(*YQ_VariableProviderCallback)(const char *symbol);
 
@@ -61,11 +52,10 @@ extern "C" {
 #endif // __cplusplus
 
 struct YQ_Expression *yq_v1_context_eval(struct YQ_Context *context,
-                                         const struct YQ_Expression *expr);
+                                         const struct YQ_Expression *expr,
+                                         bool *error);
 
 void yq_v1_context_free(struct YQ_Context *context);
-
-enum YQ_EvalError yq_v1_context_get_last_error(struct YQ_Context *context);
 
 struct YQ_Context *yq_v1_context_new(void);
 
