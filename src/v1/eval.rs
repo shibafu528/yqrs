@@ -5,7 +5,8 @@ use bitflags::bitflags;
 use std::collections::HashMap;
 
 bitflags! {
-    struct CompatFlags: u32 {
+    #[repr(transparent)]
+    pub struct CompatFlags: u32 {
         /// 1つの引数で `equals` を評価する際、その引数が `t` であるかを返すようにする。
         /// この互換性フラグを使用しない場合、そのような状況では無条件で `t` を返す。
         const RETURN_COMPARE_TO_T_IN_SINGLE_ARGUMENT_EQUALS = 0b00000001;
@@ -63,6 +64,10 @@ impl Context {
 
     pub fn set_method_dispatcher(&mut self, dispatcher: Box<dyn MethodDispatcher>) {
         self.method_dispatcher = Some(dispatcher);
+    }
+
+    pub fn set_compat_flags(&mut self, flags: CompatFlags) {
+        self.compat_flags = flags;
     }
 
     fn get_variable(&self, symbol: &str) -> Result<Expression, Error> {

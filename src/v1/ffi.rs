@@ -1,5 +1,5 @@
 use crate::v1::eval;
-use crate::v1::eval::{Error, MethodDispatcher, VariableProvider};
+use crate::v1::eval::{CompatFlags, Error, MethodDispatcher, VariableProvider};
 use crate::v1::expr::{Atom, Cons, Expression};
 use crate::v1::lex::LexerError;
 use crate::v1::parser::ParseError;
@@ -292,6 +292,14 @@ pub unsafe extern "C" fn yq_v1_context_set_method_dispatcher(
     (*context)
         .context
         .set_method_dispatcher(Box::new(CMethodDispatcher(callback)));
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_context_set_compat_flags(context: *mut Context, flags: CompatFlags) {
+    if context.is_null() {
+        return;
+    }
+    (*context).context.set_compat_flags(flags);
 }
 
 #[no_mangle]

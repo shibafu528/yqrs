@@ -38,6 +38,27 @@ typedef struct YQ_Source YQ_Source;
 
 typedef struct YQ_Expression *(*YQ_Function)(struct YQ_Context *context, void *user_data, const char *symbol, const struct YQ_Expression *cdr, bool *error);
 
+typedef uint32_t YQ_CompatFlags;
+/**
+ * 1つの引数で `equals` を評価する際、その引数が `t` であるかを返すようにする。
+ * この互換性フラグを使用しない場合、そのような状況では無条件で `t` を返す。
+ */
+#define YQ_CompatFlags_RETURN_COMPARE_TO_T_IN_SINGLE_ARGUMENT_EQUALS (uint32_t)1
+/**
+ * 引数なしで `or` を評価する際、`nil` の代わりに `t` を返すようにする。
+ */
+#define YQ_CompatFlags_RETURN_TRUE_IN_NO_ARGUMENTS_OR (uint32_t)2
+/**
+ * `and` および `or` の引数を評価する際、厳密に `t` である場合のみそれが真であると判断する。
+ * この互換性フラグを使用しない場合、`nil` 以外であればすべて真であると判断する。
+ */
+#define YQ_CompatFlags_EXPLICIT_COMPARE_TO_T_IN_AND_OR (uint32_t)4
+/**
+ * `nil` の引数を評価する際、厳密に `t` である場合のみそれが真であると判断する。
+ * この互換性フラグを使用しない場合、`nil` 以外であればすべて真であると判断する。
+ */
+#define YQ_CompatFlags_EXPLICIT_COMPARE_TO_T_IN_NOT (uint32_t)8
+
 typedef struct YQ_Expression *(*YQ_MethodDispatcherCallback)(const char *symbol, const struct YQ_Expression *receiver, const struct YQ_Expression *cddr, bool *error);
 
 typedef struct YQ_Expression *(*YQ_VariableProviderCallback)(const char *symbol);
@@ -63,6 +84,8 @@ void yq_v1_context_register_function(struct YQ_Context *context,
                                      const char *symbol,
                                      YQ_Function function,
                                      void *user_data);
+
+void yq_v1_context_set_compat_flags(struct YQ_Context *context, YQ_CompatFlags flags);
 
 void yq_v1_context_set_method_dispatcher(struct YQ_Context *context,
                                          YQ_MethodDispatcherCallback callback);
