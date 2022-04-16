@@ -71,3 +71,16 @@ pub fn op_or(context: &mut Context, cdr: &Expression) -> Result<Expression, Erro
     }
     Ok(Expression::nil())
 }
+
+pub fn op_not(context: &mut Context, cdr: &Expression) -> Result<Expression, Error> {
+    if let Some(first) = cdr.iter().next() {
+        let true_value = Expression::t();
+        if context.evaluate(first)? == true_value {
+            Ok(true_value)
+        } else {
+            Ok(Expression::nil())
+        }
+    } else {
+        Err(error_wrong_number_of_arguments())
+    }
+}
