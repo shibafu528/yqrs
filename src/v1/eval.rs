@@ -9,6 +9,8 @@ bitflags! {
         /// 1つの引数で `equals` を評価する際、その引数が `t` であるかを返すようにする。
         /// この互換性フラグを使用しない場合、そのような状況では無条件で `t` を返す。
         const RETURN_COMPARE_TO_T_IN_SINGLE_ARGUMENT_EQUALS = 0b00000001;
+        /// 引数なしで `or` を評価する際、`nil` の代わりに `t` を返すようにする。
+        const RETURN_TRUE_IN_NO_ARGUMENTS_OR = 0b00000010;
     }
 }
 
@@ -164,7 +166,7 @@ impl Context {
     }
 
     fn op_or(&mut self, cdr: &Expression) -> Result<Expression, Error> {
-        let mut last = Expression::Atom(Atom::Nil);
+        let mut last = self.or_default_value();
         for expr in cdr.iter() {
             last = self.evaluate(expr)?;
             if !last.is_nil() {
@@ -266,6 +268,14 @@ impl Context {
             acc %= self.evaluate(expr).and_then(expr_to_int)?;
         }
         Ok(Expression::Atom(Atom::Integer(acc)))
+    }
+
+    fn or_default_value(&self) -> Expression {
+        if self.compat_flags.contains(CompatFlags::RETURN_TRUE_IN_NO_ARGUMENTS_OR) {
+            Expression::t()
+        } else {
+            Expression::nil()
+        }
     }
 }
 
