@@ -1,10 +1,22 @@
+mod op_compat;
+
 use crate::v1::expr::{Atom, Cons, Expression};
+use bitflags::bitflags;
 use std::collections::HashMap;
+
+bitflags! {
+    struct CompatFlags: u32 {
+        /// 1つの引数で `equals` を評価する際、その引数が `t` であるかを返すようにする。
+        /// この互換性フラグを使用しない場合、そのような状況では無条件で `t` を返す。
+        const RETURN_COMPARE_TO_T_IN_SINGLE_ARGUMENT_EQUALS = 0b00000001;
+    }
+}
 
 pub struct Context {
     functions: HashMap<String, Box<dyn FnMut(&mut Context, &str, &Expression) -> Result<Expression, Error>>>,
     variable_provider: Option<Box<dyn VariableProvider>>,
     method_dispatcher: Option<Box<dyn MethodDispatcher>>,
+    compat_flags: CompatFlags,
 }
 
 impl Context {
@@ -13,6 +25,7 @@ impl Context {
             functions: HashMap::new(),
             variable_provider: None,
             method_dispatcher: None,
+            compat_flags: CompatFlags::empty(),
         }
     }
 
@@ -81,8 +94,26 @@ impl Context {
             "and" | "&" => self.op_and(cdr),
             "or" | "|" => self.op_or(cdr),
             "not" | "!" => self.op_not(cdr),
-            "equals" | "eq" | "=" | "==" => self.op_equals(cdr),
-            "noteq" | "neq" | "!=" | "/=" => self.op_noteq(cdr),
+            "equals" | "eq" | "=" | "==" => {
+                if self
+                    .compat_flags
+                    .contains(CompatFlags::RETURN_COMPARE_TO_T_IN_SINGLE_ARGUMENT_EQUALS)
+                {
+                    op_compat::op_equals(self, cdr)
+                } else {
+                    self.op_equals(cdr)
+                }
+            }
+            "noteq" | "neq" | "!=" | "/=" => {
+                if self
+                    .compat_flags
+                    .contains(CompatFlags::RETURN_COMPARE_TO_T_IN_SINGLE_ARGUMENT_EQUALS)
+                {
+                    op_compat::op_noteq(self, cdr)
+                } else {
+                    self.op_noteq(cdr)
+                }
+            }
             "contains" | "in" => self.op_contains(cdr),
             "list" => self.op_list(cdr),
             "quote" => Ok(cdr.clone()),
