@@ -96,25 +96,16 @@ impl Context {
     }
 
     fn op_equals(&mut self, cdr: &Expression) -> Result<Expression, Error> {
-        match cdr {
-            Expression::Atom(Atom::Nil) => Ok(Expression::Atom(Atom::Nil)),
-            Expression::Atom(_) => Ok(Expression::t()),
-            Expression::Cons(cons) => {
-                let car = self.evaluate(cons.car())?;
-                let mut cdr = cons.cdr();
-                while !cdr.is_nil() {
-                    let cadr = match cdr {
-                        Expression::Cons(c) => {
-                            cdr = c.cdr(); // cddr
-                            c.car()
-                        }
-                        atom @ Expression::Atom(_) => {
-                            cdr = &Expression::Atom(Atom::Nil);
-                            atom
-                        }
-                    };
-                    if car != self.evaluate(cadr)? {
-                        return Ok(Expression::Atom(Atom::Nil));
+        let args: Vec<&Expression> = cdr.iter().collect();
+        match args.len() {
+            0 => Err(error_wrong_number_of_arguments()),
+            1 => Ok(Expression::t()),
+            _ => {
+                let (first, rest) = args.split_first().unwrap();
+                let first = self.evaluate(first)?;
+                for compare in rest {
+                    if first != self.evaluate(compare)? {
+                        return Ok(Expression::nil());
                     }
                 }
                 Ok(Expression::t())
