@@ -39,3 +39,35 @@ pub fn op_noteq(context: &mut Context, cdr: &Expression) -> Result<Expression, E
         Ok(Expression::Atom(Atom::Nil))
     }
 }
+
+pub fn op_and(context: &mut Context, cdr: &Expression) -> Result<Expression, Error> {
+    let true_value = Expression::t();
+
+    let args: Vec<&Expression> = cdr.iter().collect();
+    if args.is_empty() {
+        return Ok(true_value);
+    }
+
+    for expr in args {
+        if context.evaluate(expr)? != true_value {
+            return Ok(Expression::nil());
+        }
+    }
+    Ok(true_value)
+}
+
+pub fn op_or(context: &mut Context, cdr: &Expression) -> Result<Expression, Error> {
+    let true_value = Expression::t();
+
+    let args: Vec<&Expression> = cdr.iter().collect();
+    if args.is_empty() {
+        return Ok(true_value);
+    }
+
+    for expr in args {
+        if context.evaluate(expr)? == true_value {
+            return Ok(true_value);
+        }
+    }
+    Ok(Expression::nil())
+}

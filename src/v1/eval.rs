@@ -11,6 +11,9 @@ bitflags! {
         const RETURN_COMPARE_TO_T_IN_SINGLE_ARGUMENT_EQUALS = 0b00000001;
         /// 引数なしで `or` を評価する際、`nil` の代わりに `t` を返すようにする。
         const RETURN_TRUE_IN_NO_ARGUMENTS_OR = 0b00000010;
+        /// `and` および `or` の引数を評価する際、厳密に `t` である場合のみ真であると判断する。
+        /// この互換性フラグを使用しない場合、`nil` 以外であればすべて真であると判断する。
+        const EXPLICIT_COMPARE_TO_T_IN_AND_OR = 0b00000100;
     }
 }
 
@@ -93,8 +96,20 @@ impl Context {
 
     fn call_builtin(&mut self, symbol: &str, cdr: &Expression) -> Result<Expression, Error> {
         match symbol {
-            "and" | "&" => self.op_and(cdr),
-            "or" | "|" => self.op_or(cdr),
+            "and" | "&" => {
+                if self.compat_flags.contains(CompatFlags::EXPLICIT_COMPARE_TO_T_IN_AND_OR) {
+                    op_compat::op_and(self, cdr)
+                } else {
+                    self.op_and(cdr)
+                }
+            }
+            "or" | "|" => {
+                if self.compat_flags.contains(CompatFlags::EXPLICIT_COMPARE_TO_T_IN_AND_OR) {
+                    op_compat::op_or(self, cdr)
+                } else {
+                    self.op_or(cdr)
+                }
+            }
             "not" | "!" => self.op_not(cdr),
             "equals" | "eq" | "=" | "==" => {
                 if self
