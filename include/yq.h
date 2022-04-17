@@ -32,6 +32,8 @@ typedef struct YQ_Context YQ_Context;
 
 typedef struct YQ_Expression YQ_Expression;
 
+typedef struct YQ_Parser YQ_Parser;
+
 typedef struct YQ_Query YQ_Query;
 
 typedef struct YQ_Source YQ_Source;
@@ -128,7 +130,13 @@ struct YQ_Expression *yq_v1_expression_new_symbol(const char *symbol);
 
 struct YQ_Expression *yq_v1_expression_new_t(void);
 
-enum YQ_ParseStatus yq_v1_parse(const char *query, struct YQ_Query **out);
+enum YQ_ParseStatus yq_v1_parser_get_last_error(const struct YQ_Parser *parser);
+
+size_t yq_v1_parser_get_last_error_message(const struct YQ_Parser *parser, char *dest, size_t len);
+
+struct YQ_Parser *yq_v1_parser_new(void);
+
+struct YQ_Query *yq_v1_parser_parse(struct YQ_Parser *parser, const char *query);
 
 void yq_v1_query_free(struct YQ_Query *query);
 

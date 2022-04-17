@@ -5,8 +5,10 @@ use crate::v1::lex::LexerError;
 use crate::v1::parser::ParseError;
 use crate::v1::query::{Query, Source};
 use libc::c_char;
+use std::cmp::min;
 use std::ffi::{c_void, CStr, CString};
 use std::ptr::{null, null_mut};
+use thiserror::Error;
 
 #[repr(C)]
 pub struct StringRef {
@@ -33,6 +35,18 @@ impl ToStringRef for &str {
     }
 }
 
+pub struct Parser {
+    last_error: Option<ParserLastError>,
+}
+
+#[derive(Error, Debug)]
+enum ParserLastError {
+    #[error(transparent)]
+    ParseError(#[from] ParseError),
+    #[error("invalid query string")]
+    InvalidQuery,
+}
+
 #[repr(C)]
 pub enum ParseStatus {
     Success = 0,
@@ -46,22 +60,31 @@ pub enum ParseStatus {
     LexerStringIsNotClosed = 2000,
 }
 
-impl From<LexerError> for ParseStatus {
-    fn from(e: LexerError) -> Self {
+impl From<&LexerError> for ParseStatus {
+    fn from(e: &LexerError) -> Self {
         match e {
             LexerError::StringIsNotClosed => ParseStatus::LexerStringIsNotClosed,
         }
     }
 }
 
-impl From<ParseError> for ParseStatus {
-    fn from(e: ParseError) -> Self {
+impl From<&ParseError> for ParseStatus {
+    fn from(e: &ParseError) -> Self {
         match e {
             ParseError::LexerError(e) => e.into(),
             ParseError::UnexpectedToken(_) => ParseStatus::UnexpectedToken,
             ParseError::UnexpectedEOF => ParseStatus::UnexpectedEOF,
             ParseError::UnparseableNumber(_) => ParseStatus::UnparseableNumber,
             ParseError::UnterminatedList => ParseStatus::UnterminatedList,
+        }
+    }
+}
+
+impl From<&ParserLastError> for ParseStatus {
+    fn from(e: &ParserLastError) -> Self {
+        match e {
+            ParserLastError::ParseError(e) => e.into(),
+            ParserLastError::InvalidQuery => ParseStatus::InvalidQuery,
         }
     }
 }
@@ -99,18 +122,60 @@ pub enum ExprType {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn yq_v1_parse(query: *const c_char, out: *mut *mut Query) -> ParseStatus {
+pub unsafe extern "C" fn yq_v1_parser_new() -> *mut Parser {
+    Box::into_raw(Box::new(Parser { last_error: None }))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_parser_parse(parser: *mut Parser, query: *const c_char) -> *mut Query {
+    if parser.is_null() {
+        return null_mut();
+    }
+    (*parser).last_error = None;
     let query = match CStr::from_ptr(query).to_str() {
         Ok(s) => s,
-        Err(_) => return ParseStatus::InvalidQuery,
+        Err(_) => {
+            (*parser).last_error = Some(ParserLastError::InvalidQuery);
+            return null_mut();
+        }
     };
     match crate::v1::parser::parse(query) {
-        Ok(q) => {
-            *out = Box::into_raw(Box::new(q));
-            ParseStatus::Success
+        Ok(q) => Box::into_raw(Box::new(q)),
+        Err(e) => {
+            (*parser).last_error = Some(ParserLastError::ParseError(e));
+            null_mut()
         }
-        Err(e) => e.into(),
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_parser_get_last_error(parser: *const Parser) -> ParseStatus {
+    if parser.is_null() {
+        return ParseStatus::Success;
+    }
+    match (*parser).last_error.as_ref() {
+        Some(e) => e.into(),
+        None => ParseStatus::Success,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yq_v1_parser_get_last_error_message(
+    parser: *const Parser,
+    dest: *mut c_char,
+    len: usize,
+) -> usize {
+    if parser.is_null() {
+        return 0;
+    }
+
+    let message = (*parser).last_error.as_ref().map(|e| e.to_string()).unwrap_or_default();
+    let c_message = CString::new(message).unwrap();
+    let actual_len = c_message.as_bytes().len();
+
+    // TODO: can i copy from `message` directly?
+    dest.copy_from_nonoverlapping(c_message.as_ptr(), min(len, actual_len + 1));
+    actual_len
 }
 
 #[no_mangle]
